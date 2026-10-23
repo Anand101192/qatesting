@@ -4,9 +4,9 @@ import io
 import openpyxl
 from openpyxl.styles import Alignment
 
-st.set_page_config(page_title="Enterprise QA Generator - ERL Functional Edition", layout="wide")
+st.set_page_config(page_title="Enterprise QA Generator - Unlimited Edition", layout="wide")
 
-st.title("🧪 Enterprise E2E QA Test Generator (Unlimited Functional & Workflow Suite)")
+st.title("🧪 Enterprise E2E QA Test Generator (1000+ Functional Suite)")
 st.markdown("Generate unlimited test cases covering complete ERL functional workflows: Ticketing, QR Gates, Payments (Success/Failure/Timeouts), Schedules, Login, and Error Recovery.")
 
 # Sidebar Configuration
@@ -17,13 +17,13 @@ test_category = st.sidebar.selectbox(
     ["ERL Complete Functional Suite (Ticketing, Gates, Payments, Errors)", "ETS & KTMB Passenger Journey", "All Systems"]
 )
 
-# Unlimited slider up to 300 test cases
-test_target_count = st.sidebar.slider(
+# Number input field replacing slider to allow 1000+ or any custom count
+test_target_count = st.sidebar.number_input(
     "Number of Test Cases to Generate:",
-    min_value=20,
-    max_value=300,
-    value=150,
-    step=10
+    min_value=10,
+    max_value=2000,
+    value=1000,
+    step=50
 )
 
 # File Uploader
@@ -35,8 +35,8 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     st.info(f"File loaded successfully: **{uploaded_file.name}**")
 
-if st.button("🚀 Generate Unlimited Functional Master Suite"):
-    with st.spinner(f"Generating {test_target_count} comprehensive functional test cases..."):
+if st.button("🚀 Generate Master ERL Test Suite"):
+    with st.spinner(f"Generating {test_target_count} detailed ERL test cases..."):
         
         origins = [
             ("KL Sentral", "KLS"),
@@ -54,7 +54,7 @@ if st.button("🚀 Generate Unlimited Functional Master Suite"):
             ("KL Sentral", "KLS")
         ]
         
-        # Rich functional scenarios covering ticketing, payments, gates, errors, and accounts
+        # Comprehensive functional scenarios covering ticketing, payments, gates, errors, and accounts
         functional_templates = [
             {
                 "module": "ERL Ticketing & Booking",
@@ -134,100 +134,4 @@ if st.button("🚀 Generate Unlimited Functional Master Suite"):
                 "scenario": "Verify user can successfully log into the app with valid email and password",
                 "desc": "Tests authentication workflow for returning registered users.",
                 "pre": "User has a registered account.",
-                "steps": "1. Open app and navigate to Login screen.\n2. Enter registered email address and password.\n3. Tap 'Login'.",
-                "expected": "User is authenticated successfully and redirected to home dashboard."
-            },
-            {
-                "module": "Error Handling & Recovery",
-                "name": "App Crash Recovery During Payment Processing",
-                "scenario": "Verify app syncs transaction state upon relaunch if killed during payment processing",
-                "desc": "Tests system state recovery when app process is unexpectedly terminated during payment spinner.",
-                "pre": "Payment transaction is in progress.",
-                "steps": "1. Kill app process while processing spinner is active.\n2. Relaunch app and check booking history.",
-                "expected": "App syncs with backend; if debited, ticket shows under active bookings; if failed, cart is restored."
-            }
-        ]
-        
-        generated_suite = []
-        
-        for i in range(1, test_target_count + 1):
-            tmpl = functional_templates[(i - 1) % len(functional_templates)]
-            var_num = ((i - 1) // len(functional_templates)) + 1
-            
-            # Rotate stations to ensure no duplicate destinations
-            orig_name, orig_code = origins[(i - 1) % len(origins)]
-            dest_name, dest_code = destinations[(i - 1) % len(destinations)]
-            if orig_name == dest_name:
-                dest_name, dest_code = destinations[i % len(destinations)]
-                
-            priority = "High" if i % 3 == 0 else ("Medium" if i % 2 == 0 else "Low")
-            
-            test_name = f"[{tmpl['module']}] {tmpl['name']} - Var {var_num}"
-            scenario = f"{tmpl['scenario']} for route {orig_name} ({orig_code}) to {dest_name} ({dest_code}) (Variant {var_num})"
-            description = f"{tmpl['desc']} Executed for station route {orig_code} -> {dest_code} under test iteration #{i}."
-            
-            test_data = f"Origin: {orig_name} [{orig_code}], Dest: {dest_name} [{dest_code}], Run ID: {i:03d}"
-            expected_result = f"{tmpl['expected']} Route {orig_code} -> {dest_code} processes accurately."
-            
-            generated_suite.append({
-                "Test ID": f"TC_ERL_{i:03d}",
-                "Test Name": test_name,
-                "Scenario": scenario,
-                "Description": description,
-                "Pre Condition": tmpl['pre'],
-                "Test Steps": tmpl['steps'],
-                "Test Data": test_data,
-                "Expected Result": expected_result,
-                "Actual Result": "",
-                "Status": "Pending",
-                "Priority": priority,
-                "Remarks": ""
-            })
-        
-        df = pd.DataFrame(generated_suite)
-        
-        st.subheader(f"📋 Generated {len(df)} Comprehensive Functional Test Cases")
-        st.dataframe(df, use_container_width=True)
-        
-        # Export to Excel with vertical text wrapping and professional column formatting
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Master_Test_Suite')
-            
-        output.seek(0)
-        wb = openpyxl.load_workbook(output)
-        ws = wb.active
-        
-        # Apply vertical alignment and wrap text to all cells
-        for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-            for cell in row:
-                cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
-                
-        # Set clean column widths to prevent horizontal over-stretching
-        column_widths = {
-            'A': 12,  # Test ID
-            'B': 30,  # Test Name
-            'C': 40,  # Scenario
-            'D': 35,  # Description
-            'E': 25,  # Pre Condition
-            'F': 38,  # Test Steps (stacked vertically)
-            'G': 28,  # Test Data
-            'H': 38,  # Expected Result
-            'I': 15,  # Actual Result
-            'J': 12,  # Status
-            'K': 12,  # Priority
-            'L': 15   # Remarks
-        }
-        for col, width in column_widths.items():
-            ws.column_dimensions[col].width = width
-            
-        final_output = io.BytesIO()
-        wb.save(final_output)
-        final_output.seek(0)
-        
-        st.download_button(
-            label=f"📥 Download All {len(df)} Test Cases (.xlsx)",
-            data=final_output,
-            file_name="Master_ERL_Functional_Test_Cases.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+                "steps": "1. Open app and navigate to Login screen.\n2. Enter registered email address and password.\n3. Tap '
