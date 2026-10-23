@@ -74,7 +74,8 @@ if uploaded_file is not None:
             
             generated_suite = []
             
-            # Base Master Templates cleanly formatted to avoid syntax breaks
+            # Base Master Templates cleanly formatted as clean tuple strings
             templates = [
-                ("High-Level", "E2E KLIA Ekspres One-Way Ticket Purchase", "User logged in with valid card.", "1. Select Origin (KL Sentral) & Destination (KLIA T1/T2).\n2. Choose date & passenger count.\n3. Complete payment.\n4. Access E-Ticket tab.", "Payment succeeds; valid QR code generated; status marked ACTIVE.", "P1 - Critical"),
-                ("High-Level", "E2E KLIA Transit Multi-Station Ticket Booking", "App active.", "1. Select origin (Bandar Tasik Selatan) & destination (Putrajaya & Cyberjaya).\
+                ("High-Level", "E2E KLIA Ekspres One-Way Ticket Purchase", "User logged in with valid card.", "Step 1: Select Origin (KL Sentral) & Destination (KLIA T1/T2). Step 2: Choose date & passenger count. Step 3: Complete payment. Step 4: Access E-Ticket tab.", "Payment succeeds; valid QR code generated; status marked ACTIVE.", "P1 - Critical"),
+                ("High-Level", "E2E KLIA Transit Multi-Station Ticket Booking", "App active.", "Step 1: Select origin (Bandar Tasik Selatan) & destination (Putrajaya & Cyberjaya). Step 2: Select fare class. Step 3: Proceed through checkout.", "Route fare accurately calculated; booking confirmed with dual-gate QR code.", "P1 - Critical"),
+                ("High-Level", "E2E Ticket Cancellation & Refund Workflow", "Active unused ticket
