@@ -7,7 +7,7 @@ from openpyxl.styles import Alignment
 st.set_page_config(page_title="Enterprise QA Generator - Unlimited Edition", layout="wide")
 
 st.title("🧪 Enterprise E2E QA Test Generator (1000+ Functional Suite)")
-st.markdown("Generate unlimited test cases covering complete ERL functional workflows or Deals & Rewards purchases.")
+st.markdown("Generate unlimited test cases covering complete ERL functional workflows or Deals & Rewards direct money purchases.")
 
 # Sidebar Configuration
 st.sidebar.header("⚙️ Generator Settings")
@@ -16,7 +16,7 @@ test_category = st.sidebar.selectbox(
     "Target Domain / Feature Scope:",
     [
         "ERL Complete Functional Suite (Ticketing, Gates, Payments, Errors)", 
-        "Deals & Rewards (Wallet, Cards & Touch 'n Go)",
+        "Deals & Rewards (Direct Purchase via Wallet, Cards & Touch 'n Go)",
         "ETS & KTMB Passenger Journey", 
         "All Systems"
     ]
@@ -129,8 +129,24 @@ if st.button("🚀 Generate Master Test Suite"):
             }
         ]
 
-        # 2. Deals & Rewards Payment Templates (Wallet, Cards, Touch 'n Go)
+        # 2. Deals & Rewards Money Purchase Templates (In-App Wallet, Saved/New Cards, Touch 'n Go)
         deals_templates = [
+            {
+                "module": "Deals & Rewards - Direct Purchase", "name": "View Available Deals & Rewards Catalog",
+                "scenario": "Verify user can view list of available partner deals with direct monetary pricing (RM)",
+                "desc": "Validates that the Deals/Rewards catalog loads active partner offers with accurate Ringgit pricing and category filters.",
+                "pre": "User is logged into the mobile application with an active internet connection.",
+                "steps": ["1. Launch the app and tap on the 'Deals' or 'Rewards' tab.", "2. Verify featured banners and category filters load with monetary prices (e.g., RM 5.00, RM 10.00).", "3. Tap on a category filter (e.g., 'Dining' or 'Travel').", "4. Verify deal list updates to show matching partner offers."],
+                "expected": "Deals catalog loads successfully; category filters work correctly and display relevant partner deals with RM pricing."
+            },
+            {
+                "module": "Deals & Rewards - Direct Purchase", "name": "View Deal Details & Price Breakdown",
+                "scenario": "Verify user can view full deal details, original price, discounted purchase price (RM), and validity period",
+                "desc": "Tests tapping on a specific deal card to view detailed description, partner locations, and terms of purchase.",
+                "pre": "User is on the Deals home screen.",
+                "steps": ["1. Tap on any active partner deal card.", "2. Verify deal details screen opens displaying banner, partner name, and monetary purchase price.", "3. Scroll down to check 'Terms & Conditions' and validity period."],
+                "expected": "Deal details page opens correctly, showing accurate partner information, validity dates, and readable T&Cs."
+            },
             {
                 "module": "Deals Checkout - In-App Wallet", "name": "Direct Purchase Using In-App Stored Wallet Balance",
                 "scenario": "Verify user can purchase a deal voucher directly using available in-app wallet balance",
@@ -183,7 +199,7 @@ if st.button("🚀 Generate Master Test Suite"):
         
         if "Deals & Rewards" in test_category:
             active_templates = deals_templates
-            file_prefix = "Master_Deals"
+            file_prefix = "Master_Deals_Purchase"
         else:
             active_templates = erl_templates
             file_prefix = "Master_ERL"
@@ -201,8 +217,8 @@ if st.button("🚀 Generate Master Test Suite"):
                 test_name = f"[{brand_name}] {tmpl['name']} - Var {var_num}"
                 scenario = f"{tmpl['scenario']} for partner {brand_name} [{brand_code}] (Variant {var_num})"
                 description = f"{tmpl['desc']} Executed for partner offer {brand_name} under test iteration #{i}."
-                test_data = f"Partner: {brand_name} [{brand_code}], Price: RM {(var_num * 12):.2f}, Run ID: {i:03d}"
-                expected_result = f"{tmpl['expected']} Partner {brand_name} transaction processes successfully."
+                test_data = f"Partner: {brand_name} [{brand_code}], Price: RM {(var_num * 10):.2f}, Run ID: {i:03d}"
+                expected_result = f"{tmpl['expected']} Partner {brand_name} purchase transaction processes successfully."
             else:
                 orig_name, orig_code = origins[(i - 1) % len(origins)]
                 dest_name, dest_code = destinations[(i - 1) % len(destinations)]
