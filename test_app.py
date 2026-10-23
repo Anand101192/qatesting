@@ -4,17 +4,17 @@ import io
 import openpyxl
 from openpyxl.styles import Alignment
 
-st.set_page_config(page_title="Enterprise QA Generator - ERL UI Edition", layout="wide")
+st.set_page_config(page_title="Enterprise QA Generator - ERL Functional Edition", layout="wide")
 
-st.title("🧪 Enterprise E2E QA Test Generator (Unlimited ERL & UI Suite)")
-st.markdown("Generate unlimited test cases covering UI validation (logos, wording, brand colors, station codes) and unique ERL routes.")
+st.title("🧪 Enterprise E2E QA Test Generator (Unlimited Functional & Workflow Suite)")
+st.markdown("Generate unlimited test cases covering complete ERL functional workflows: Ticketing, QR Gates, Payments (Success/Failure/Timeouts), Schedules, Login, and Error Recovery.")
 
 # Sidebar Configuration
 st.sidebar.header("⚙️ Generator Settings")
 
 test_category = st.sidebar.selectbox(
     "Target Domain / Feature Scope:",
-    ["ERL (Express Rail Link & KLIA Ekspres/Transit)", "ETS & KTMB Passenger Journey", "All Systems"]
+    ["ERL Complete Functional Suite (Ticketing, Gates, Payments, Errors)", "ETS & KTMB Passenger Journey", "All Systems"]
 )
 
 # Unlimited slider up to 300 test cases
@@ -35,10 +35,9 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     st.info(f"File loaded successfully: **{uploaded_file.name}**")
 
-if st.button("🚀 Generate Unlimited Master Test Suite"):
-    with st.spinner(f"Generating {test_target_count} unique UI & ERL test cases..."):
+if st.button("🚀 Generate Unlimited Functional Master Suite"):
+    with st.spinner(f"Generating {test_target_count} comprehensive functional test cases..."):
         
-        # Unique ERL stations and codes to prevent repetition
         origins = [
             ("KL Sentral", "KLS"),
             ("Bandar Tasik Selatan", "BTS"),
@@ -55,52 +54,128 @@ if st.button("🚀 Generate Unlimited Master Test Suite"):
             ("KL Sentral", "KLS")
         ]
         
-        ui_checks = [
-            ("UI Logo & Brand Color", "Verify official ERL logo is displayed with brand red (#E31B23) and high contrast text."),
-            ("Station Code Wording", "Verify station name matches destination code abbreviation precisely (e.g., KLIA Terminal 2 [KLT2])."),
-            ("Button Wording & Label", "Verify action buttons display correct wording (e.g., 'Book Now', 'Confirm Payment') without typos."),
-            ("Currency & Fare Formatting", "Verify ticket pricing displays in Malaysian Ringgit (RM) format (e.g., RM 55.00)."),
-            ("Screen Layout & Font Size", "Verify UI typography is readable, clean, and properly aligned without horizontal overflow.")
+        # Rich functional scenarios covering ticketing, payments, gates, errors, and accounts
+        functional_templates = [
+            {
+                "module": "ERL Ticketing & Booking",
+                "name": "One-Way Ekspres Booking",
+                "scenario": "Verify user can complete a full one-way KLIA Ekspres booking workflow from origin to destination",
+                "desc": "Validates end-to-end ticket selection, passenger count, fare calculation, and checkout confirmation.",
+                "pre": "User is logged into the app with a verified account and saved payment method.",
+                "steps": "1. Launch app and tap 'Book Ticket'.\n2. Select service type as 'KLIA Ekspres'.\n3. Select Origin and Destination stations.\n4. Choose travel date, time slot, and passenger type.\n5. Proceed to payment and complete checkout.",
+                "expected": "Booking is confirmed successfully, order summary is displayed, and digital QR ticket is generated."
+            },
+            {
+                "module": "ERL Ticketing & Booking",
+                "name": "Transit Multi-Station Booking",
+                "scenario": "Verify user can book intermediate transit stops on KLIA Transit route",
+                "desc": "Validates multi-station fare calculation and route selection for KLIA Transit.",
+                "pre": "User is on the ticket booking home screen.",
+                "steps": "1. Tap on 'KLIA Transit' tab.\n2. Select intermediate origin and destination stations.\n3. Verify intermediate fare calculation.\n4. Proceed to payment screen.",
+                "expected": "Correct fare for intermediate transit route is calculated and ticket is issued with valid QR code."
+            },
+            {
+                "module": "ERL QR Gate & Turnstile",
+                "name": "Digital QR Code Gantry Entry",
+                "scenario": "Verify active ticket generates scannable QR code for station gantry entry turnstile",
+                "desc": "Tests QR ticket rendering on mobile screen for station turnstile scanning.",
+                "pre": "User has a valid active ticket in 'My Tickets'.",
+                "steps": "1. Navigate to 'My Tickets' and select active ticket.\n2. Tap 'View QR Code' for entry gate.\n3. Verify barcode clarity and auto screen brightness boost.",
+                "expected": "QR code renders clearly, barcode is scannable, and screen brightness increases automatically."
+            },
+            {
+                "module": "ERL QR Gate & Turnstile",
+                "name": "Offline E-Ticket Barcode Retrieval",
+                "scenario": "Verify user can access cached e-ticket QR code when offline at station gates",
+                "desc": "Tests offline ticket retrieval feature when mobile data/Wi-Fi is unavailable.",
+                "pre": "User has previously downloaded the ticket while online.",
+                "steps": "1. Enable Flight Mode on mobile device.\n2. Open app and navigate to 'My Tickets'.\n3. Tap on active ticket to view QR code.",
+                "expected": "Cached QR ticket loads successfully from local storage without requiring internet connection."
+            },
+            {
+                "module": "ERL Schedule & Tracker",
+                "name": "Live Train Departure Timetable Search",
+                "scenario": "Verify user can view upcoming train departures for selected station",
+                "desc": "Tests timetable search functionality for upcoming departures.",
+                "pre": "User is on the home dashboard.",
+                "steps": "1. Tap on 'Schedules / Timetable'.\n2. Select target station.\n3. View list of upcoming train departures and platform info.",
+                "expected": "App displays accurate departure times, train numbers, and platform numbers."
+            },
+            {
+                "module": "Payment Gateway",
+                "name": "Credit/Debit Card Secure Checkout Success",
+                "scenario": "Verify successful payment processing using valid credit card and 3D-Secure OTP",
+                "desc": "Tests secure payment gateway integration with credit card entry and OTP verification.",
+                "pre": "User is on checkout payment screen with ticket selected.",
+                "steps": "1. Select 'Credit/Debit Card' payment method.\n2. Enter valid card number, expiry, CVV, and cardholder name.\n3. Tap 'Pay Now' and complete bank 3D-Secure OTP verification.",
+                "expected": "Payment is authorized successfully, order receipt is generated, and ticket is issued."
+            },
+            {
+                "module": "Payment Gateway",
+                "name": "Payment Failure on Declined Card",
+                "scenario": "Verify app handles declined card payment gracefully without crashing",
+                "desc": "Tests negative scenario when bank declines payment transaction due to insufficient funds.",
+                "pre": "User is on checkout screen.",
+                "steps": "1. Enter test card configured to return 'Declined' response.\n2. Tap 'Pay Now' and submit transaction.",
+                "expected": "App displays clear error message 'Payment failed: Card declined' and allows user to retry."
+            },
+            {
+                "module": "Payment Gateway",
+                "name": "Payment Gateway Timeout Handling",
+                "scenario": "Verify app behavior when payment gateway session times out (> 180 seconds)",
+                "desc": "Tests system resilience when banking gateway takes longer than expected to respond.",
+                "pre": "User initiates payment checkout.",
+                "steps": "1. Tap 'Pay Now'.\n2. Simulate gateway network delay exceeding 180 seconds.",
+                "expected": "App catches timeout exception, displays friendly error notification, and restores cart without double-charging."
+            },
+            {
+                "module": "User Account & Auth",
+                "name": "User Login with Registered Credentials",
+                "scenario": "Verify user can successfully log into the app with valid email and password",
+                "desc": "Tests authentication workflow for returning registered users.",
+                "pre": "User has a registered account.",
+                "steps": "1. Open app and navigate to Login screen.\n2. Enter registered email address and password.\n3. Tap 'Login'.",
+                "expected": "User is authenticated successfully and redirected to home dashboard."
+            },
+            {
+                "module": "Error Handling & Recovery",
+                "name": "App Crash Recovery During Payment Processing",
+                "scenario": "Verify app syncs transaction state upon relaunch if killed during payment processing",
+                "desc": "Tests system state recovery when app process is unexpectedly terminated during payment spinner.",
+                "pre": "Payment transaction is in progress.",
+                "steps": "1. Kill app process while processing spinner is active.\n2. Relaunch app and check booking history.",
+                "expected": "App syncs with backend; if debited, ticket shows under active bookings; if failed, cart is restored."
+            }
         ]
         
         generated_suite = []
         
         for i in range(1, test_target_count + 1):
-            # Rotate origins and destinations mathematically so they never repeat blindly
+            tmpl = functional_templates[(i - 1) % len(functional_templates)]
+            var_num = ((i - 1) // len(functional_templates)) + 1
+            
+            # Rotate stations to ensure no duplicate destinations
             orig_name, orig_code = origins[(i - 1) % len(origins)]
             dest_name, dest_code = destinations[(i - 1) % len(destinations)]
-            
-            # Ensure origin and destination are never identical
             if orig_name == dest_name:
                 dest_name, dest_code = destinations[i % len(destinations)]
                 
-            ui_element, ui_expected = ui_checks[(i - 1) % len(ui_checks)]
-            
             priority = "High" if i % 3 == 0 else ("Medium" if i % 2 == 0 else "Low")
             
-            test_name = f"UI & Booking Verification: {orig_name} to {dest_name}"
-            scenario = f"Verify UI elements ({ui_element}) and booking flow from {orig_name} ({orig_code}) to {dest_name} ({dest_code})"
-            description = f"Checks that the application correctly renders UI components, wording, and station codes for route {orig_code} -> {dest_code}."
-            
-            pre_condition = "App is launched, user is on the booking dashboard with active network connection."
-            
-            test_steps = (
-                f"1. Open app and verify {ui_element}.\n"
-                f"2. Select Origin as {orig_name} [{orig_code}] and Destination as {dest_name} [{dest_code}].\n"
-                f"3. Verify destination name and station code match UI specification exactly.\n"
-                f"4. Proceed to checkout and verify button wording and currency display."
-            )
+            test_name = f"[{tmpl['module']}] {tmpl['name']} - Var {var_num}"
+            scenario = f"{tmpl['scenario']} for route {orig_name} ({orig_code}) to {dest_name} ({dest_code}) (Variant {var_num})"
+            description = f"{tmpl['desc']} Executed for station route {orig_code} -> {dest_code} under test iteration #{i}."
             
             test_data = f"Origin: {orig_name} [{orig_code}], Dest: {dest_name} [{dest_code}], Run ID: {i:03d}"
-            expected_result = f"{ui_expected} Route from {orig_name} [{orig_code}] to {dest_name} [{dest_code}] calculates correct fare and displays proper UI branding."
+            expected_result = f"{tmpl['expected']} Route {orig_code} -> {dest_code} processes accurately."
             
             generated_suite.append({
                 "Test ID": f"TC_ERL_{i:03d}",
                 "Test Name": test_name,
                 "Scenario": scenario,
                 "Description": description,
-                "Pre Condition": pre_condition,
-                "Test Steps": test_steps,
+                "Pre Condition": tmpl['pre'],
+                "Test Steps": tmpl['steps'],
                 "Test Data": test_data,
                 "Expected Result": expected_result,
                 "Actual Result": "",
@@ -111,7 +186,7 @@ if st.button("🚀 Generate Unlimited Master Test Suite"):
         
         df = pd.DataFrame(generated_suite)
         
-        st.subheader(f"📋 Generated {len(df)} Unlimited Unique Test Cases")
+        st.subheader(f"📋 Generated {len(df)} Comprehensive Functional Test Cases")
         st.dataframe(df, use_container_width=True)
         
         # Export to Excel with vertical text wrapping and professional column formatting
@@ -153,6 +228,6 @@ if st.button("🚀 Generate Unlimited Master Test Suite"):
         st.download_button(
             label=f"📥 Download All {len(df)} Test Cases (.xlsx)",
             data=final_output,
-            file_name="Master_ERL_UI_Test_Cases.xlsx",
+            file_name="Master_ERL_Functional_Test_Cases.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
