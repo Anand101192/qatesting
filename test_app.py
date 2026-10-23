@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-import zipfile
 import io
 
-st.set_page_config(page_title="Enterprise QA Generator - ERL Edition", layout="wide")
+st.set_page_config(page_title="Enterprise QA Generator", layout="wide")
 
 st.title("🧪 Enterprise E2E QA Test Generator (100+ Test Cases)")
-st.markdown("Upload your APK file (`KitsStyleUAT.apk`), PDF, or spec document to automatically scan internal screens and generate 100+ detailed high-level and low-level test cases.")
+st.markdown("Upload your APK file, PDF specification, or document, then generate up to 200+ detailed high-level and low-level test cases instantly.")
 
 # Sidebar Configuration
 st.sidebar.header("⚙️ Generator Settings")
@@ -24,23 +23,6 @@ test_target_count = st.sidebar.slider(
     step=10
 )
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Included Coverage:**")
-st.sidebar.markdown("- High-Level E2E Journeys\n- Low-Level Field Rules\n- Offline Barcode Scanning\n- Payment Gateway Timeouts\n- Error Handling & Edge Cases")
-
-# Helper function to parse screens/activities directly from APK file
-def inspect_apk(file_bytes):
-    screens = []
-    try:
-        with zipfile.ZipFile(io.BytesIO(file_bytes), 'r') as z:
-            for filename in z.namelist():
-                if filename.startswith("res/layout/") and filename.endswith(".xml"):
-                    clean_name = filename.replace("res/layout/", "").replace(".xml", "")
-                    screens.append(clean_name)
-    except Exception:
-        pass
-    return list(set(screens))
-
 # File Uploader
 uploaded_file = st.file_uploader(
     "Upload APK, Build File, Specification PDF, or Spreadsheet",
@@ -48,34 +30,61 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    st.info(f"File loaded: **{uploaded_file.name}** ({round(uploaded_file.size / (1024*1024), 1)} MB)")
-    
-    # Run APK inspection if an APK is uploaded
-    extracted_screens = []
-    if uploaded_file.name.endswith(".apk"):
-        with st.spinner("Extracting internal layout modules and activities from APK..."):
-            extracted_screens = inspect_apk(uploaded_file.getvalue())
-            if extracted_screens:
-                st.success(f"Successfully extracted {len(extracted_screens)} screen components from APK layout resources!")
-                with st.expander("View Extracted Screen Layouts"):
-                    st.write(", ".join(extracted_screens[:30]) + ("..." if len(extracted_screens) > 30 else ""))
+    st.info(f"File loaded successfully: **{uploaded_file.name}**")
 
-    if st.button("🚀 Generate 100+ ERL & E2E Test Cases"):
-        with st.spinner("Generating 100+ high-level and low-level test cases..."):
+if st.button("🚀 Generate Master Test Suite"):
+    with st.spinner(f"Generating {test_target_count} comprehensive test cases..."):
+        
+        modules = [
+            "ERL KLIA Ekspres Ticketing",
+            "ERL KLIA Transit Inter-City",
+            "ERL QR Code Gate Reader & Offline Ticket",
+            "ERL Station Schedule & Train Tracker",
+            "Payment Gateway & Wallet",
+            "User Account & Session Management"
+        ]
+        
+        generated_suite = []
+        
+        for i in range(1, test_target_count + 1):
+            mod = modules[(i - 1) % len(modules)]
+            level = "High-Level" if i % 2 == 0 else "Low-Level"
+            priority = "P1 - Critical" if i % 3 == 0 else ("P2 - High" if i % 2 == 0 else "P3 - Medium")
             
-            modules = [
-                "ERL KLIA Ekspres Ticketing",
-                "ERL KLIA Transit Inter-City",
-                "ERL QR Code Gate Reader & Offline Ticket",
-                "ERL Station Schedule & Train Tracker",
-                "Payment Gateway & Wallet",
-                "User Account & Session Management"
-            ]
+            if level == "High-Level":
+                scenario = f"[{mod}] E2E User Journey & Booking Flow #{i}"
+                steps = "Step 1: Launch application and authenticate. Step 2: Navigate to module dashboard. Step 3: Complete primary transaction. Step 4: Verify confirmation record."
+                expected = "Transaction completed successfully; digital receipt and tracking ID generated."
+            else:
+                scenario = f"[{mod}] Field Validation & Edge Case Check #{i}"
+                steps = "Step 1: Access input form or UI control. Step 2: Input boundary or invalid test parameter. Step 3: Trigger validation check."
+                expected = "System appropriately validates input, displays correct inline error or enforces UI restriction."
             
-            generated_suite = []
-            
-            # Base Master Templates cleanly formatted as clean tuple strings
-            templates = [
-                ("High-Level", "E2E KLIA Ekspres One-Way Ticket Purchase", "User logged in with valid card.", "Step 1: Select Origin (KL Sentral) & Destination (KLIA T1/T2). Step 2: Choose date & passenger count. Step 3: Complete payment. Step 4: Access E-Ticket tab.", "Payment succeeds; valid QR code generated; status marked ACTIVE.", "P1 - Critical"),
-                ("High-Level", "E2E KLIA Transit Multi-Station Ticket Booking", "App active.", "Step 1: Select origin (Bandar Tasik Selatan) & destination (Putrajaya & Cyberjaya). Step 2: Select fare class. Step 3: Proceed through checkout.", "Route fare accurately calculated; booking confirmed with dual-gate QR code.", "P1 - Critical"),
-                ("High-Level", "E2E Ticket Cancellation & Refund Workflow", "Active unused ticket
+            generated_suite.append({
+                "Test Case ID": f"TC_ERL_{i:03d}",
+                "Module": mod,
+                "Level": level,
+                "Test Scenario": scenario,
+                "Preconditions": "User has active session and valid network/cached state.",
+                "Test Steps": steps,
+                "Expected Result": expected,
+                "Priority": priority
+            })
+        
+        df = pd.DataFrame(generated_suite)
+        
+        st.subheader(f"📋 Generated {len(df)} Test Cases for {test_category}")
+        st.dataframe(df, use_container_width=True)
+        
+        # Export to Excel
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Master_Test_Suite')
+        processed_data = output.getvalue()
+        
+        st.download_button(
+            label=f"📥 Download All {len(df)} Test Cases (.xlsx)",
+            data=processed_data,
+            file_name="Master_ERL_Test_Cases.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
