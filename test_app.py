@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import zipfile
-import re
 import io
 
 st.set_page_config(page_title="Enterprise QA Generator - ERL Edition", layout="wide")
@@ -73,20 +72,9 @@ if uploaded_file is not None:
                 "User Account & Session Management"
             ]
             
-            levels = ["High-Level", "Low-Level"]
-            priorities = ["P1 - Critical", "P2 - High", "P3 - Medium"]
-            
             generated_suite = []
             
-            # Base Master Templates to scale across 100+ test cases
+            # Base Master Templates cleanly formatted to avoid syntax breaks
             templates = [
-                # High-Level E2E Scenarios
                 ("High-Level", "E2E KLIA Ekspres One-Way Ticket Purchase", "User logged in with valid card.", "1. Select Origin (KL Sentral) & Destination (KLIA T1/T2).\n2. Choose date & passenger count.\n3. Complete payment.\n4. Access E-Ticket tab.", "Payment succeeds; valid QR code generated; status marked ACTIVE.", "P1 - Critical"),
-                ("High-Level", "E2E KLIA Transit Multi-Station Ticket Booking", "App active.", "1. Select origin (Bandar Tasik Selatan) & destination (Putrajaya & Cyberjaya).\n2. Select fare class.\n3. Proceed through checkout.", "Route fare accurately calculated; booking confirmed with dual-gate QR code.", "P1 - Critical"),
-                ("High-Level", "E2E Ticket Cancellation & Refund Workflow", "Active unused ticket exists.", "1. Open active ticket.\n2. Tap 'Cancel & Refund'.\n3. Confirm refund policy warning.", "Ticket invalidated; refund confirmation issued with transaction ID.", "P2 - High"),
-                ("High-Level", "E2E Schedule Search & Live Train Departure Tracking", "App connected.", "1. Tap 'Train Schedules'.\n2. Select station and departure window.\n3. View real-time train status.", "Live departure board loads with delay warnings and platform numbers.", "P2 - High"),
-                
-                # Low-Level Field & UI Validations
-                ("Low-Level", "Validate Departure Date Selector - Past Date Boundary", "On ERL booking screen.", "1. Tap departure date input.\n2. Attempt selecting yesterday's date.", "Past dates greyed out and unselectable; calendar prevents invalid submit.", "P2 - High"),
-                ("Low-Level", "Validate Passenger Counter Maximum Limit (Adults/Children)", "On passenger selection.", "1. Tap '+' icon on Adult counter up to 20 passengers.", "UI displays max limit warning (e.g. Max 10 passengers per booking).", "P3 - Medium"),
-                ("Low-Level", "Validate Discount Promo Code Input - Invalid Code", "On checkout screen.", "1. Enter promo code 'INVALID2026'.\n2. Tap Apply.", "Error message 'Invalid or expired promo code' shown
+                ("High-Level", "E2E KLIA Transit Multi-Station Ticket Booking", "App active.", "1. Select origin (Bandar Tasik Selatan) & destination (Putrajaya & Cyberjaya).\
