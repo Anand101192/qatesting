@@ -7,7 +7,7 @@ from openpyxl.styles import Alignment
 st.set_page_config(page_title="Enterprise QA Generator - Dynamic E2E Suite", layout="wide")
 
 st.title("🧪 Enterprise E2E Test Suite Generator")
-st.markdown("Generates comprehensive, non-redundant test cases based strictly on uploaded artifacts (APK, specs, or spreadsheets) with clean pre-conditions (starting from KITS app homepage and tapping features/icons).")
+st.markdown("Generates comprehensive, non-redundant test cases based strictly on uploaded artifacts with clean pre-conditions (starting from KITS app homepage and tapping features/icons).")
 
 st.sidebar.header("⚙️ Generator Settings")
 
@@ -138,8 +138,6 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
                             tc_counter += 1
 
         df = pd.DataFrame(generated_suite)
-        
-        # Ensure 100% zero duplicates based on Test Steps & Test Data combinations
         df = df.drop_duplicates(subset=['Test Steps', 'Test Data']).reset_index(drop=True)
         
         st.success(f"Successfully generated {len(df)} unique, non-redundant E2E test cases based on actual app scope!")
@@ -158,4 +156,20 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
                 cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
 
         column_widths = {
-            'A': 15, 'B': 35, 'C': 4
+            'A': 15, 'B': 35, 'C': 45, 'D': 40, 'E': 25,
+            'F': 50, 'G': 32, 'H': 45, 'I': 15, 'J': 12, 'K': 12, 'L': 15
+        }
+        for col, width in column_widths.items():
+            ws.column_dimensions[col].width = width
+
+        final_output = io.BytesIO()
+        wb.save(final_output)
+        final_output.seek(0)
+
+        st.download_button(
+            label=f"📥 Download All {len(df)} Unique Test Cases (.xlsx)",
+            data=final_output,
+            file_name=f"KITS_Master_Workflow_{len(df)}_Test_Cases.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+```[cite: 9]
