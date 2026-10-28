@@ -129,41 +129,8 @@ if st.button("🚀 Generate Master Test Suite"):
             }
         ]
 
-        # 2. Deals & Rewards Money Purchase Templates (In-App Wallet, Saved/New Cards, Touch 'n Go)
+        # 2. Deals & Rewards Money Purchase Templates
         deals_templates = [
             {
                 "module": "Deals & Rewards - Direct Purchase", "name": "View Available Deals & Rewards Catalog",
                 "scenario": "Verify user can view list of available partner deals with direct monetary pricing (RM)",
-                "desc": "Validates that the Deals/Rewards catalog loads active partner offers with accurate Ringgit pricing and category filters.",
-                "pre": "User is logged into the mobile application with an active internet connection.",
-                "steps": ["1. Launch the app and tap on the 'Deals' or 'Rewards' tab.", "2. Verify featured banners and category filters load with monetary prices (e.g., RM 5.00, RM 10.00).", "3. Tap on a category filter (e.g., 'Dining' or 'Travel').", "4. Verify deal list updates to show matching partner offers."],
-                "expected": "Deals catalog loads successfully; category filters work correctly and display relevant partner deals with RM pricing."
-            },
-            {
-                "module": "Deals & Rewards - Direct Purchase", "name": "View Deal Details & Price Breakdown",
-                "scenario": "Verify user can view full deal details, original price, discounted purchase price (RM), and validity period",
-                "desc": "Tests tapping on a specific deal card to view detailed description, partner locations, and terms of purchase.",
-                "pre": "User is on the Deals home screen.",
-                "steps": ["1. Tap on any active partner deal card.", "2. Verify deal details screen opens displaying banner, partner name, and monetary purchase price.", "3. Scroll down to check 'Terms & Conditions' and validity period."],
-                "expected": "Deal details page opens correctly, showing accurate partner information, validity dates, and readable T&Cs."
-            },
-            {
-                "module": "Deals Checkout - In-App Wallet", "name": "Direct Purchase Using In-App Stored Wallet Balance",
-                "scenario": "Verify user can purchase a deal voucher directly using available in-app wallet balance",
-                "desc": "Validates direct checkout flow, instant debit of stored wallet funds, and receipt generation.",
-                "pre": "User has sufficient in-app wallet balance and is viewing an active deal.",
-                "steps": ["1. Tap 'Buy Now' on an active deal detail page.", "2. Select 'In-App Wallet' as the payment method.", "3. Review the price breakdown and tap 'Pay Now'."],
-                "expected": "In-app wallet balance is debited correctly, purchase receipt is generated, and voucher appears in 'My Vouchers'."
-            },
-            {
-                "module": "Deals Checkout - In-App Wallet", "name": "Top-Up Prompt on Insufficient In-App Wallet Balance",
-                "scenario": "Verify user prompts user to top-up when in-app wallet balance is insufficient for deal purchase",
-                "desc": "Tests negative balance handling and quick navigation to wallet top-up screen.",
-                "pre": "User has low in-app wallet balance and attempts to buy a deal.",
-                "steps": ["1. Select 'In-App Wallet' for a deal purchase exceeding current balance.", "2. Tap 'Pay Now'."],
-                "expected": "App displays 'Insufficient balance' warning and provides a direct button to top up wallet funds."
-            },
-            {
-                "module": "Deals Checkout - Saved Cards", "name": "Purchase Deal Using Saved Credit/Debit Card",
-                "scenario": "Verify user can checkout a deal using a previously saved credit or debit card",
-                "desc
