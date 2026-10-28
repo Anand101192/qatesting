@@ -4,10 +4,10 @@ import io
 import openpyxl
 from openpyxl.styles import Alignment
 
-st.set_page_config(page_title="Enterprise QA Generator - ERL Workflow", layout="wide")
+st.set_page_config(page_title="Enterprise QA Generator - Global E2E Suite", layout="wide")
 
-st.title("🧪 KITS & ERL E2E Test Suite Generator")
-st.markdown("Generates comprehensive, non-redundant test cases starting from **KITS homepage -> ERL icon** through **Journey -> Products -> Passenger -> Details -> Review -> Payment**.")
+st.title("🧪 Enterprise E2E Test Suite Generator (Global Login & Flexible Pre-Conditions)")
+st.markdown("Generates comprehensive, non-redundant test cases with **globalized pre-condition login (Biometrics/PIN)** plus dynamic pre-conditions, starting directly from the **KITS homepage icons** through complete workflows (Journey -> Products -> Passenger -> Details -> Review -> Payment).")
 
 st.sidebar.header("⚙️ Generator Settings")
 
@@ -38,7 +38,7 @@ if uploaded_file is not None:
     st.info(f"File loaded successfully: **{uploaded_file.name}**")
 
 if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
-    with st.spinner("Generating unique E2E test suite covering all workflow paths..."):
+    with st.spinner("Generating unique E2E test suite with globalized login and modular pre-conditions..."):
         
         origins = [
             ("KL Sentral", "KLS"), 
@@ -63,10 +63,10 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
             ("Child / Senior", "1 Concession")
         ]
         payment_scenarios = [
-            ("Secure Checkout (Pass)", "Payment authorized successfully via 3D-Secure OTP; digital ticket issued with scannable QR Code & barcode rendered clearly with auto screen brightness boost."),
-            ("Payment Failure (Declined Card)", "App displays 'Payment failed: Card declined' error message, keeps cart intact, and permits payment retry."),
-            ("Payment Hold / Pending", "App handles pending gateway state gracefully, displays 'Transaction Processing', and polls status without double-charging."),
-            ("Network Error / Timeout (>180s)", "App catches network timeout, displays friendly error alert, and safely restores user cart session.")
+            ("Secure Checkout (Pass)", "Payment authorized successfully via 3D-Secure OTP; digital ticket issued with scannable QR Code & barcode rendered clearly with auto screen brightness boost.", "Active internet connection & saved payment card linked."),
+            ("Payment Failure (Declined Card)", "App displays 'Payment failed: Card declined' error message, keeps cart intact, and permits payment retry.", "Active internet connection & test card configured to return 'Declined' response."),
+            ("Payment Hold / Pending", "App handles pending gateway state gracefully, displays 'Transaction Processing', and polls status without double-charging.", "Active internet connection & simulated gateway latency (>30s)."),
+            ("Network Error / Timeout (>180s)", "App catches network timeout, displays friendly error alert, and safely restores user cart session.", "Unstable network connection or simulated gateway timeout.")
         ]
 
         fixed_date = "2026-11-15 (10:30 AM)"
@@ -79,17 +79,18 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
                     continue
                 for prod_name, prod_desc in products_types:
                     for pass_name, pass_desc in passenger_types:
-                        for pay_name, pay_expected in payment_scenarios:
+                        for pay_name, pay_expected, pay_specific_pre in payment_scenarios:
                             if tc_counter > test_target_count:
                                 break
                             
-                            test_id = f"TC_ERL_{tc_counter:03d}"
+                            test_id = f"TC_KITS_{tc_counter:03d}"
                             test_name = f"[{orig_code}->{dest_code}] {prod_name} - {pass_name} ({pay_name.split()[0]})"
                             scenario = f"Verify E2E workflow: KITS Homepage -> ERL Icon -> Journey ({orig_name} to {dest_name}) -> Products -> Passenger -> Details -> Review -> Payment ({pay_name})"
                             
-                            description = f"Complete unique user journey from KITS homepage tapping ERL icon, selecting route {orig_name} to {dest_name} on fixed date {fixed_date}, selecting product {prod_name}, configuring passenger {pass_name}, entering contact details, reviewing itinerary summary, and processing payment under {pay_name}."
+                            description = f"Globalized E2E test starting from KITS homepage tapping ERL icon, selecting route {orig_name} to {dest_name} on fixed date {fixed_date}, selecting product {prod_name}, configuring passenger {pass_name}, entering contact details, reviewing itinerary summary, and processing payment under {pay_name}."
                             
-                            pre_condition = "User is logged into the KITS app using Biometrics or PIN."
+                            # Globalized Pre-Condition combining Login + Scenario-specific supplementary pre-conditions
+                            pre_condition = f"1. [GLOBAL] User is authenticated and logged into the KITS app using Biometrics or PIN.\n2. [MODULE] {pay_specific_pre}"
                             
                             test_steps = (
                                 f"1. On KITS app homepage, locate and tap the **ERL icon**.\n"
@@ -131,12 +132,12 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
         # Ensure 100% zero duplicates based on Test Steps & Test Data combinations
         df = df.drop_duplicates(subset=['Test Steps', 'Test Data']).reset_index(drop=True)
         
-        st.success(f"Successfully generated {len(df)} unique, non-redundant E2E test cases!")
+        st.success(f"Successfully generated {len(df)} unique E2E test cases with globalized login and modular pre-conditions!")
         st.dataframe(df, use_container_width=True)
 
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='ERL_Workflow_Suite')
+            df.to_excel(writer, index=False, sheet_name='KITS_Global_Suite')
 
         output.seek(0)
         wb = openpyxl.load_workbook(output)
@@ -160,6 +161,6 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
         st.download_button(
             label=f"📥 Download All {len(df)} Unique Test Cases (.xlsx)",
             data=final_output,
-            file_name=f"ERL_Icon_Workflow_{len(df)}_Test_Cases.xlsx",
+            file_name=f"KITS_Global_Workflow_{len(df)}_Test_Cases.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
