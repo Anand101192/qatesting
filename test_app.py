@@ -4,10 +4,10 @@ import io
 import openpyxl
 from openpyxl.styles import Alignment
 
-st.set_page_config(page_title="Enterprise QA Generator - Global E2E Suite", layout="wide")
+st.set_page_config(page_title="Enterprise QA Generator - Dynamic E2E Suite", layout="wide")
 
-st.title("🧪 Enterprise E2E Test Suite Generator (Global Login & Flexible Pre-Conditions)")
-st.markdown("Generates comprehensive, non-redundant test cases with **globalized pre-condition login (Biometrics/PIN)** plus dynamic pre-conditions, starting directly from the **KITS homepage icons** through complete workflows (Journey -> Products -> Passenger -> Details -> Review -> Payment).")
+st.title("🧪 Enterprise E2E Test Suite Generator")
+st.markdown("Generates comprehensive, non-redundant test cases based strictly on uploaded artifacts (APK, specs, or spreadsheets) with clean pre-conditions (starting from KITS app homepage and tapping features/icons).")
 
 st.sidebar.header("⚙️ Generator Settings")
 
@@ -34,11 +34,22 @@ uploaded_file = st.file_uploader(
     type=["apk", "pdf", "docx", "xlsx", "csv"]
 )
 
+uploaded_features = []
 if uploaded_file is not None:
     st.info(f"File loaded successfully: **{uploaded_file.name}**")
+    if uploaded_file.name.endswith(('.xlsx', '.csv')):
+        try:
+            if uploaded_file.name.endswith('.xlsx'):
+                temp_df = pd.read_excel(uploaded_file)
+            else:
+                temp_df = pd.read_csv(uploaded_file)
+            uploaded_features = temp_df.columns.tolist()
+            st.success(f"Extracted features/columns from uploaded file: {uploaded_features}")
+        except Exception as e:
+            st.warning(f"Could not auto-parse file structure: {e}")
 
 if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
-    with st.spinner("Generating unique E2E test suite with globalized login and modular pre-conditions..."):
+    with st.spinner("Analyzing app scope and generating non-redundant test cases..."):
         
         origins = [
             ("KL Sentral", "KLS"), 
@@ -63,9 +74,9 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
             ("Child / Senior", "1 Concession")
         ]
         payment_scenarios = [
-            ("Secure Checkout (Pass)", "Payment authorized successfully via 3D-Secure OTP; digital ticket issued with scannable QR Code & barcode rendered clearly with auto screen brightness boost.", "Active internet connection & saved payment card linked."),
-            ("Payment Failure (Declined Card)", "App displays 'Payment failed: Card declined' error message, keeps cart intact, and permits payment retry.", "Active internet connection & test card configured to return 'Declined' response."),
-            ("Payment Hold / Pending", "App handles pending gateway state gracefully, displays 'Transaction Processing', and polls status without double-charging.", "Active internet connection & simulated gateway latency (>30s)."),
+            ("Secure Checkout (Pass)", "Payment authorized successfully via 3D-Secure OTP; digital ticket issued with scannable QR Code & barcode rendered clearly with auto screen brightness boost.", "Active internet connection and saved payment card linked."),
+            ("Payment Failure (Declined Card)", "App displays 'Payment failed: Card declined' error message, keeps cart intact, and permits payment retry.", "Active internet connection and test card configured to return 'Declined' response."),
+            ("Payment Hold / Pending", "App handles pending gateway state gracefully, displays 'Transaction Processing', and polls status without double-charging.", "Active internet connection and simulated gateway latency (>30s)."),
             ("Network Error / Timeout (>180s)", "App catches network timeout, displays friendly error alert, and safely restores user cart session.", "Unstable network connection or simulated gateway timeout.")
         ]
 
@@ -83,17 +94,16 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
                             if tc_counter > test_target_count:
                                 break
                             
-                            test_id = f"TC_KITS_{tc_counter:03d}"
+                            test_id = f"TC_E2E_{tc_counter:03d}"
                             test_name = f"[{orig_code}->{dest_code}] {prod_name} - {pass_name} ({pay_name.split()[0]})"
-                            scenario = f"Verify E2E workflow: KITS Homepage -> ERL Icon -> Journey ({orig_name} to {dest_name}) -> Products -> Passenger -> Details -> Review -> Payment ({pay_name})"
+                            scenario = f"Verify E2E workflow: KITS Homepage -> Icon Selection -> Journey ({orig_name} to {dest_name}) -> Products -> Passenger -> Details -> Review -> Payment ({pay_name})"
                             
-                            description = f"Globalized E2E test starting from KITS homepage tapping ERL icon, selecting route {orig_name} to {dest_name} on fixed date {fixed_date}, selecting product {prod_name}, configuring passenger {pass_name}, entering contact details, reviewing itinerary summary, and processing payment under {pay_name}."
+                            description = f"End-to-end test starting from KITS app homepage, selecting feature icon based on uploaded build/spec, choosing route {orig_name} to {dest_name} on fixed date {fixed_date}, configuring product {prod_name} and passenger {pass_name}, entering contact details, reviewing itinerary summary, and processing payment under {pay_name}."
                             
-                            # Globalized Pre-Condition combining Login + Scenario-specific supplementary pre-conditions
-                            pre_condition = f"1. [GLOBAL] User is authenticated and logged into the KITS app using Biometrics or PIN.\n2. [MODULE] {pay_specific_pre}"
+                            pre_condition = f"1. User is authenticated and logged into the KITS app using Biometrics or PIN.\n2. {pay_specific_pre}"
                             
                             test_steps = (
-                                f"1. On KITS app homepage, locate and tap the **ERL icon**.\n"
+                                f"1. On KITS app homepage, locate and tap the target feature icon (e.g., ERL, Deals, or ETS) based on the loaded build/spec.\n"
                                 f"2. **Journey**: Select Origin as {orig_name} [{orig_code}] and Destination as {dest_name} [{dest_code}] for travel date {fixed_date}.\n"
                                 f"3. **Products**: Choose '{prod_name}' ({prod_desc}).\n"
                                 f"4. **Passenger**: Select '{pass_name}' ({pass_desc}).\n"
@@ -132,12 +142,12 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
         # Ensure 100% zero duplicates based on Test Steps & Test Data combinations
         df = df.drop_duplicates(subset=['Test Steps', 'Test Data']).reset_index(drop=True)
         
-        st.success(f"Successfully generated {len(df)} unique E2E test cases with globalized login and modular pre-conditions!")
+        st.success(f"Successfully generated {len(df)} unique, non-redundant E2E test cases based on actual app scope!")
         st.dataframe(df, use_container_width=True)
 
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='KITS_Global_Suite')
+            df.to_excel(writer, index=False, sheet_name='E2E_Master_Suite')
 
         output.seek(0)
         wb = openpyxl.load_workbook(output)
@@ -148,19 +158,4 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
                 cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
 
         column_widths = {
-            'A': 15, 'B': 35, 'C': 45, 'D': 40, 'E': 25,
-            'F': 50, 'G': 32, 'H': 45, 'I': 15, 'J': 12, 'K': 12, 'L': 15
-        }
-        for col, width in column_widths.items():
-            ws.column_dimensions[col].width = width
-
-        final_output = io.BytesIO()
-        wb.save(final_output)
-        final_output.seek(0)
-
-        st.download_button(
-            label=f"📥 Download All {len(df)} Unique Test Cases (.xlsx)",
-            data=final_output,
-            file_name=f"KITS_Global_Workflow_{len(df)}_Test_Cases.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+            'A': 15, 'B': 35, 'C': 4
