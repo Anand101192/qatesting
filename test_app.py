@@ -129,8 +129,159 @@ if st.button("🚀 Generate Master Test Suite"):
             }
         ]
 
-        # 2. Deals & Rewards Money Purchase Templates
+        # 2. Deals & Rewards Money Purchase Templates (In-App Wallet, Saved/New Cards, Touch 'n Go)
         deals_templates = [
             {
                 "module": "Deals & Rewards - Direct Purchase", "name": "View Available Deals & Rewards Catalog",
                 "scenario": "Verify user can view list of available partner deals with direct monetary pricing (RM)",
+                "desc": "Validates that the Deals/Rewards catalog loads active partner offers with accurate Ringgit pricing and category filters.",
+                "pre": "User is logged into the mobile application with an active internet connection.",
+                "steps": ["1. Launch the app and tap on the 'Deals' or 'Rewards' tab.", "2. Verify featured banners and category filters load with monetary prices (e.g., RM 5.00, RM 10.00).", "3. Tap on a category filter (e.g., 'Dining' or 'Travel').", "4. Verify deal list updates to show matching partner offers."],
+                "expected": "Deals catalog loads successfully; category filters work correctly and display relevant partner deals with RM pricing."
+            },
+            {
+                "module": "Deals & Rewards - Direct Purchase", "name": "View Deal Details & Price Breakdown",
+                "scenario": "Verify user can view full deal details, original price, discounted purchase price (RM), and validity period",
+                "desc": "Tests tapping on a specific deal card to view detailed description, partner locations, and terms of purchase.",
+                "pre": "User is on the Deals home screen.",
+                "steps": ["1. Tap on any active partner deal card.", "2. Verify deal details screen opens displaying banner, partner name, and monetary purchase price.", "3. Scroll down to check 'Terms & Conditions' and validity period."],
+                "expected": "Deal details page opens correctly, showing accurate partner information, validity dates, and readable T&Cs."
+            },
+            {
+                "module": "Deals Checkout - In-App Wallet", "name": "Direct Purchase Using In-App Stored Wallet Balance",
+                "scenario": "Verify user can purchase a deal voucher directly using available in-app wallet balance",
+                "desc": "Validates direct checkout flow, instant debit of stored wallet funds, and receipt generation.",
+                "pre": "User has sufficient in-app wallet balance and is viewing an active deal.",
+                "steps": ["1. Tap 'Buy Now' on an active deal detail page.", "2. Select 'In-App Wallet' as the payment method.", "3. Review the price breakdown and tap 'Pay Now'."],
+                "expected": "In-app wallet balance is debited correctly, purchase receipt is generated, and voucher appears in 'My Vouchers'."
+            },
+            {
+                "module": "Deals Checkout - In-App Wallet", "name": "Top-Up Prompt on Insufficient In-App Wallet Balance",
+                "scenario": "Verify user prompts user to top-up when in-app wallet balance is insufficient for deal purchase",
+                "desc": "Tests negative balance handling and quick navigation to wallet top-up screen.",
+                "pre": "User has low in-app wallet balance and attempts to buy a deal.",
+                "steps": ["1. Select 'In-App Wallet' for a deal purchase exceeding current balance.", "2. Tap 'Pay Now'."],
+                "expected": "App displays 'Insufficient balance' warning and provides a direct button to top up wallet funds."
+            },
+            {
+                "module": "Deals Checkout - Saved Cards", "name": "Purchase Deal Using Saved Credit/Debit Card",
+                "scenario": "Verify user can checkout a deal using a previously saved credit or debit card",
+                "desc": "Tests secure payment processing using tokenized saved cards.",
+                "pre": "User has at least one saved credit/debit card linked to their account.",
+                "steps": ["1. Tap 'Buy Now' and select 'Saved Credit/Debit Card'.", "2. Select the preferred saved card and enter CVV if required.", "3. Complete 3D-Secure OTP verification and tap 'Confirm'."],
+                "expected": "Payment is processed securely through saved card token, order is confirmed, and voucher is issued."
+            },
+            {
+                "module": "Deals Checkout - Saved Cards", "name": "Add New Credit/Debit Card During Deal Checkout",
+                "scenario": "Verify user can add and save a new credit or debit card on the fly during deal checkout",
+                "desc": "Tests input validation for new card number, expiry date, CVV, and card saving option.",
+                "pre": "User is on the payment method selection screen.",
+                "steps": ["1. Tap 'Add New Card' option.", "2. Enter valid 16-digit card number, expiry date, and CVV.", "3. Check 'Save card for future payments' and tap 'Pay Now'."],
+                "expected": "New card is validated successfully, payment goes through 3D-Secure authentication, and card is saved to account."
+            },
+            {
+                "module": "Deals Checkout - External Wallet (Touch 'n Go)", "name": "Redirect and Checkout Using Touch 'n Go eWallet",
+                "scenario": "Verify user can pay for a deal by redirecting to Touch 'n Go eWallet app or web gateway",
+                "desc": "Tests deep linking / API redirect integration with Touch 'n Go eWallet payment gateway.",
+                "pre": "User has Touch 'n Go eWallet installed or accessible via mobile browser.",
+                "steps": ["1. Tap 'Buy Now' and select 'Touch 'n Go eWallet' from external wallets.", "2. Tap 'Proceed to TNG eWallet' to trigger app switch or secure web redirect.", "3. Authorize payment inside Touch 'n Go eWallet app and return."],
+                "expected": "App successfully redirects to Touch 'n Go eWallet, payment is authorized, and user is redirected back with purchase confirmation."
+            },
+            {
+                "module": "Deals Checkout - External Wallet (Touch 'n Go)", "name": "Handling Cancelled or Failed Touch 'n Go eWallet Payment",
+                "scenario": "Verify app handles payment cancellation or timeout when redirected to Touch 'n Go eWallet",
+                "desc": "Tests recovery flow when user cancels payment or closes TNG eWallet before completion.",
+                "pre": "User is redirected to Touch 'n Go eWallet for payment authorization.",
+                "steps": ["1. Tap 'Cancel' or abort payment inside Touch 'n Go eWallet app.", "2. Observe redirection back to the main application."],
+                "expected": "App detects cancelled payment, displays 'Payment cancelled by user' notification, and restores cart status without issuing voucher."
+            }
+        ]
+        
+        if "Deals & Rewards" in test_category:
+            active_templates = deals_templates
+            file_prefix = "Master_Deals_Purchase"
+        else:
+            active_templates = erl_templates
+            file_prefix = "Master_ERL"
+            
+        generated_suite = []
+        
+        for i in range(1, test_target_count + 1):
+            tmpl = active_templates[(i - 1) % len(active_templates)]
+            var_num = ((i - 1) // len(active_templates)) + 1
+            
+            priority = "High" if i % 3 == 0 else ("Medium" if i % 2 == 0 else "Low")
+            
+            if "Deals & Rewards" in test_category:
+                brand_name, brand_code = partner_brands[(i - 1) % len(partner_brands)]
+                test_name = f"[{brand_name}] {tmpl['name']} - Var {var_num}"
+                scenario = f"{tmpl['scenario']} for partner {brand_name} [{brand_code}] (Variant {var_num})"
+                description = f"{tmpl['desc']} Executed for partner offer {brand_name} under test iteration #{i}."
+                test_data = f"Partner: {brand_name} [{brand_code}], Price: RM {(var_num * 10):.2f}, Run ID: {i:03d}"
+                expected_result = f"{tmpl['expected']} Partner {brand_name} purchase transaction processes successfully."
+            else:
+                orig_name, orig_code = origins[(i - 1) % len(origins)]
+                dest_name, dest_code = destinations[(i - 1) % len(destinations)]
+                if orig_name == dest_name:
+                    dest_name, dest_code = destinations[i % len(destinations)]
+                    
+                test_name = f"[{tmpl['module']}] {tmpl['name']} - Var {var_num}"
+                scenario = f"{tmpl['scenario']} for route {orig_name} ({orig_code}) to {dest_name} ({dest_code}) (Variant {var_num})"
+                description = f"{tmpl['desc']} Executed for station route {orig_code} -> {dest_code} under test iteration #{i}."
+                test_data = f"Origin: {orig_name} [{orig_code}], Dest: {dest_name} [{dest_code}], Run ID: {i:03d}"
+                expected_result = f"{tmpl['expected']} Route {orig_code} -> {dest_code} processes accurately."
+                
+            test_steps_str = "\n".join(tmpl["steps"])
+            
+            generated_suite.append({
+                "Test ID": f"TC_{i:03d}",
+                "Test Name": test_name,
+                "Scenario": scenario,
+                "Description": description,
+                "Pre Condition": tmpl['pre'],
+                "Test Steps": test_steps_str,
+                "Test Data": test_data,
+                "Expected Result": expected_result,
+                "Actual Result": "",
+                "Status": "Pending",
+                "Priority": priority,
+                "Remarks": ""
+            })
+        
+        df = pd.DataFrame(generated_suite)
+        
+        # --- AUTO-DEDUPLICATION & AUTO-STOPPING ---
+        df = df.drop_duplicates(subset=['Test Steps']).reset_index(drop=True)
+        
+        st.subheader(f"📋 Generated {len(df)} Test Cases for {test_category}")
+        st.dataframe(df, use_container_width=True)
+        
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Test_Suite')
+            
+        output.seek(0)
+        wb = openpyxl.load_workbook(output)
+        ws = wb.active
+        
+        for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for cell in row:
+                cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
+                
+        column_widths = {
+            'A': 12, 'B': 30, 'C': 40, 'D': 35, 'E': 25,
+            'F': 38, 'G': 28, 'H': 38, 'I': 15, 'J': 12, 'K': 12, 'L': 15
+        }
+        for col, width in column_widths.items():
+            ws.column_dimensions[col].width = width
+            
+        final_output = io.BytesIO()
+        wb.save(final_output)
+        final_output.seek(0)
+        
+        st.download_button(
+            label=f"📥 Download All {len(df)} Test Cases (.xlsx)",
+            data=final_output,
+            file_name=f"{file_prefix}_{len(df)}_Test_Cases.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
