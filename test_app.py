@@ -173,4 +173,56 @@ if target_source:
                 total = len(test_rows)
 
                 for i, row in enumerate(test_rows):
-                    test_
+                    test_id = get_col(row, "Test ID", f"TC_{i+1:03d}")
+                    test_name = get_col(row, "Test Name", "Feature Test")
+                    steps = get_col(row, "Test Steps", "")
+                    expected = get_col(row, "Expected Result", "")
+                    scenario = get_col(row, "Scenario", "")
+
+                    status_text.text(f"Running [{i+1}/{total}]: {test_id} - {test_name}")
+                    
+                    # Execute steps
+                    execute_steps(steps)
+                    time.sleep(1.5)
+
+                    # Capture unique screenshot
+                    shot_filename = f"{base_name}_{test_id}.png"
+                    shot_path = os.path.join("screenshots", shot_filename)
+                    capture_screenshot(shot_filename)
+                    if os.path.exists(shot_filename):
+                        os.rename(shot_filename, shot_path)
+
+                    status = "PASS"
+
+                    # Add to Word table
+                    cells = table.add_row().cells
+                    cells[0].text = test_id
+                    cells[1].text = test_name
+                    cells[2].text = f"Scenario: {scenario}\n\nSteps:\n{steps}"
+                    cells[3].text = expected
+
+                    p_status = cells[4].paragraphs[0]
+                    r_status = p_status.add_run(status)
+                    r_status.bold = True
+                    r_status.font.color.rgb = RGBColor(0, 128, 0)
+
+                    if os.path.exists(shot_path):
+                        p_img = cells[5].paragraphs[0]
+                        p_img.add_run().add_picture(shot_path, width=Inches(1.5))
+
+                    progress_bar.progress((i + 1) / total)
+
+                doc.save(report_name)
+                status_text.success(f"🎉 Test suite completed successfully! Generated report: **{report_name}**")
+                
+                with open(report_name, "rb") as f:
+                    st.download_button(
+                        label="📥 Download Word Report (.docx)",
+                        data=f,
+                        file_name=report_name,
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+    except Exception as e:
+        st.error(f"⚠️ Error loading file from source: {e}")
+else:
+    st.info("👈 Please enter your GitHub Raw URL or select a local file from the sidebar to begin.")
