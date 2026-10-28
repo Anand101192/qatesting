@@ -157,7 +157,7 @@ if st.button("🚀 Generate Master Test Suite"):
             },
             {
                 "module": "Deals Checkout - In-App Wallet", "name": "Top-Up Prompt on Insufficient In-App Wallet Balance",
-                "scenario": "Verify app prompts user to top-up when in-app wallet balance is insufficient for deal purchase",
+                "scenario": "Verify user prompts user to top-up when in-app wallet balance is insufficient for deal purchase",
                 "desc": "Tests negative balance handling and quick navigation to wallet top-up screen.",
                 "pre": "User has low in-app wallet balance and attempts to buy a deal.",
                 "steps": ["1. Select 'In-App Wallet' for a deal purchase exceeding current balance.", "2. Tap 'Pay Now'."],
@@ -166,53 +166,4 @@ if st.button("🚀 Generate Master Test Suite"):
             {
                 "module": "Deals Checkout - Saved Cards", "name": "Purchase Deal Using Saved Credit/Debit Card",
                 "scenario": "Verify user can checkout a deal using a previously saved credit or debit card",
-                "desc": "Tests secure payment processing using tokenized saved cards.",
-                "pre": "User has at least one saved credit/debit card linked to their account.",
-                "steps": ["1. Tap 'Buy Now' and select 'Saved Credit/Debit Card'.", "2. Select the preferred saved card and enter CVV if required.", "3. Complete 3D-Secure OTP verification and tap 'Confirm'."],
-                "expected": "Payment is processed securely through saved card token, order is confirmed, and voucher is issued."
-            },
-            {
-                "module": "Deals Checkout - Saved Cards", "name": "Add New Credit/Debit Card During Deal Checkout",
-                "scenario": "Verify user can add and save a new credit or debit card on the fly during deal checkout",
-                "desc": "Tests input validation for new card number, expiry date, CVV, and card saving option.",
-                "pre": "User is on the payment method selection screen.",
-                "steps": ["1. Tap 'Add New Card' option.", "2. Enter valid 16-digit card number, expiry date, and CVV.", "3. Check 'Save card for future payments' and tap 'Pay Now'."],
-                "expected": "New card is validated successfully, payment goes through 3D-Secure authentication, and card is saved to account."
-            },
-            {
-                "module": "Deals Checkout - External Wallet (Touch 'n Go)", "name": "Redirect and Checkout Using Touch 'n Go eWallet",
-                "scenario": "Verify user can pay for a deal by redirecting to Touch 'n Go eWallet app or web gateway",
-                "desc": "Tests deep linking / API redirect integration with Touch 'n Go eWallet payment gateway.",
-                "pre": "User has Touch 'n Go eWallet installed or accessible via mobile browser.",
-                "steps": ["1. Tap 'Buy Now' and select 'Touch 'n Go eWallet' from external wallets.", "2. Tap 'Proceed to TNG eWallet' to trigger app switch or secure web redirect.", "3. Authorize payment inside Touch 'n Go eWallet app and return."],
-                "expected": "App successfully redirects to Touch 'n Go eWallet, payment is authorized, and user is redirected back with purchase confirmation."
-            },
-            {
-                "module": "Deals Checkout - External Wallet (Touch 'n Go)", "name": "Handling Cancelled or Failed Touch 'n Go eWallet Payment",
-                "scenario": "Verify app handles payment cancellation or timeout when redirected to Touch 'n Go eWallet",
-                "desc": "Tests recovery flow when user cancels payment or closes TNG eWallet before completion.",
-                "pre": "User is redirected to Touch 'n Go eWallet for payment authorization.",
-                "steps": ["1. Tap 'Cancel' or abort payment inside Touch 'n Go eWallet app.", "2. Observe redirection back to the main application."],
-                "expected": "App detects cancelled payment, displays 'Payment cancelled by user' notification, and restores cart status without issuing voucher."
-            }
-        ]
-        
-        if "Deals & Rewards" in test_category:
-            active_templates = deals_templates
-            file_prefix = "Master_Deals_Purchase"
-        else:
-            active_templates = erl_templates
-            file_prefix = "Master_ERL"
-            
-        generated_suite = []
-        
-        for i in range(1, test_target_count + 1):
-            tmpl = active_templates[(i - 1) % len(active_templates)]
-            var_num = ((i - 1) // len(active_templates)) + 1
-            
-            priority = "High" if i % 3 == 0 else ("Medium" if i % 2 == 0 else "Low")
-            
-            if "Deals & Rewards" in test_category:
-                brand_name, brand_code = partner_brands[(i - 1) % len(partner_brands)]
-                test_name = f"[{brand_name}] {tmpl['name']} - Var {var_num}"
-                scenario = f"{tmpl
+                "desc
