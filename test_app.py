@@ -172,4 +172,3 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
             file_name=f"KITS_Master_Workflow_{len(df)}_Test_Cases.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-```[cite: 9]
