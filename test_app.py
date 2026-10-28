@@ -119,6 +119,7 @@ def get_col(row, col_name, default=""):
 st.sidebar.header("📁 Test Suite Source")
 source_mode = st.sidebar.radio("Select Source", ["GitHub Raw URL", "Local Cleaned Files"])
 
+target_source = None
 if source_mode == "GitHub Raw URL":
     st.sidebar.markdown("Paste your GitHub **Raw Excel file URL** below:")
     default_gh_url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/Cleaned_ERL_UI_Test_Cases.xlsx"
@@ -150,7 +151,6 @@ if target_source:
                 status_text = st.empty()
                 
                 base_name = "GitHub_Test_Report"
-                
                 report_name = f"Autonomous_Report_{base_name}.docx"
                 
                 doc = Document()
@@ -173,35 +173,4 @@ if target_source:
                 total = len(test_rows)
 
                 for i, row in enumerate(test_rows):
-                    test_id = get_col(row, "Test ID", f"TC_{i+1:03d}")
-                    test_name = get_col(row, "Test Name", "Feature Test")
-                    steps = get_col(row, "Test Steps", "")
-                    expected = get_col(row, "Expected Result", "")
-                    scenario = get_col(row, "Scenario", "")
-
-                    status_text.text(f"Running [{i+1}/{total}]: {test_id} - {test_name}")
-                    
-                    # Execute steps
-                    execute_steps(steps)
-                    time.sleep(1.5)
-
-                    # Capture unique screenshot
-                    shot_filename = f"{base_name}_{test_id}.png"
-                    shot_path = os.path.join("screenshots", shot_filename)
-                    capture_screenshot(shot_filename)
-                    if os.path.exists(shot_filename):
-                        os.path.rename(shot_filename, shot_path)
-
-                    status = "PASS"
-
-                    # Add to Word table
-                    cells = table.add_row().cells
-                    cells[0].text = test_id
-                    cells[1].text = test_name
-                    cells[2].text = f"Scenario: {scenario}\n\nSteps:\n{steps}"
-                    cells[3].text = expected
-
-                    p_status = cells[4].paragraphs[0]
-                    r_status = p_status.add_run(status)
-                    r_status.bold = True
-                    r_
+                    test_
