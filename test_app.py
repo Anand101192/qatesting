@@ -7,7 +7,7 @@ import streamlit as st
 st.set_page_config(page_title="Enterprise QA Generator - Dynamic E2E Suite", layout="wide")
 
 st.title("🧪 Enterprise E2E Test Suite Generator")
-st.markdown("Generates comprehensive, non-redundant test cases featuring positive and negative scenarios in clean normal English (strictly without numbers, variables, or special symbols outside of Test IDs).")
+st.markdown("Generates comprehensive, non-redundant test cases featuring positive and negative scenarios in clean normal English with numeric test steps.")
 
 st.sidebar.header("⚙️ Generator Settings")
 
@@ -100,12 +100,12 @@ if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
                             
                             pre_condition = f"User is successfully authenticated and logged into the application. {pay_pre}"
                             
-                            # Using natural transition words instead of numbers for steps
+                            # Numeric numbering for test steps
                             test_steps = (
-                                f"First, navigate to the main homepage and select the target transport service feature icon. "
-                                f"Next, choose {orig} as the departure station and {dest} as the arrival station. "
-                                f"Then, choose {prod_name} with {pass_desc} classification. "
-                                f"Proceed to review the itinerary details, select {pay_name}, and complete the checkout action."
+                                f"1. Navigate to the main homepage and select the target transport service feature icon.\n"
+                                f"2. Choose {orig} as the departure station and {dest} as the arrival station.\n"
+                                f"3. Choose {prod_name} with {pass_desc} classification.\n"
+                                f"4. Proceed to review the itinerary details, select {pay_name}, and complete the checkout action."
                             )
                             
                             test_data = f"Departure Station: {orig}, Arrival Station: {dest}, Product Type: {prod_name}, Passenger Category: {pass_name}, Payment Mode: {pay_name}"
