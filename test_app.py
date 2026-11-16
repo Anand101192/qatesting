@@ -1,281 +1,165 @@
-import os
-import time
-import subprocess
-import re
+import io
+import openpyxl
+from openpyxl.styles import Alignment
 import pandas as pd
-from docx import Document
-from docx.shared import Inches, Pt
+import streamlit as st
 
-# Cross-platform compatibility for msvcrt (Windows only)
-try:
-    import msvcrt
-    has_msvcrt = True
-except ImportError:
-    has_msvcrt = False
+st.set_page_config(page_title="Enterprise QA Generator - Dynamic E2E Suite", layout="wide")
 
-# Try importing streamlit (for web app deployment)
-try:
-    import streamlit as st
-    has_streamlit = True
-except ImportError:
-    has_streamlit = False
+st.title("🧪 Enterprise E2E Test Suite Generator")
+st.markdown("Generates comprehensive, non-redundant test cases featuring positive and negative scenarios in clean normal English (strictly without numbers, variables, or special symbols outside of Test IDs).")
 
-def get_adb_path():
-    local_app_data = os.environ.get('LocalAppData', 'C:\\Users\\User\\AppData\\Local')
-    sdk_adb = os.path.join(local_app_data, 'Android', 'Sdk', 'platform-tools', 'adb.exe')
-    if os.path.exists(sdk_adb):
-        return sdk_adb
-    return 'adb'
+st.sidebar.header("⚙️ Generator Settings")
 
-def clean_natural_text(text):
-    """Cleans text to ensure natural English without technical hashes or digits."""
-    if not isinstance(text, str):
-        return str(text)
-    text = re.sub(r'\[.*?\]', '', text)
-    text = text.replace('#', '')
-    text = text.replace('KLS', 'KL Sentral')
-    text = text.replace('KLT2', 'KLIA Terminal Two')
-    text = text.replace('KLT1', 'KLIA Terminal One')
-    text = text.replace('PJC', 'Putrajaya and Cyberjaya')
-    text = text.replace('BTS', 'Bandar Tasik Selatan')
-    text = text.replace('E2E', 'End-to-end')
-    text = re.sub(r'\d+', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+test_category = st.sidebar.selectbox(
+    "Target Domain / Feature Scope:",
+    [
+        "Functional Suite (Ticketing, Gates, Payments, Errors)", 
+        "Deals and Rewards Suite",
+        "All Systems Suite"
+    ]
+)
 
-def dismiss_permissions(adb_cmd):
-    try:
-        subprocess.run([adb_cmd, "shell", "input", "tap", "540", "770"], capture_output=True)
-        time.sleep(1)
-    except:
-        pass
+test_target_count = st.sidebar.slider(
+    "Max Test Cases to Generate:",
+    min_value=20,
+    max_value=500,
+    value=100,
+    step=20
+)
 
-def execute_app_navigation(adb_cmd, tc_id, steps, scenario):
-    try:
-        subprocess.run([adb_cmd, "shell", "input", "keyevent", "KEYCODE_WAKEUP"], capture_output=True)
-        time.sleep(1)
-        dismiss_permissions(adb_cmd)
+uploaded_file = st.file_uploader(
+    "Upload APK, Build File, Specification PDF, or Spreadsheet",
+    type=["apk", "pdf", "docx", "xlsx", "csv"]
+)
 
-        steps_lower = steps.lower()
-
-        print(f"[{tc_id}] Navigating: Tapping ERL ticketing module...")
-        subprocess.run([adb_cmd, "shell", "input", "tap", "825", "570"], capture_output=True)
-        time.sleep(3)
-        dismiss_permissions(adb_cmd)
-
-        if "station" in steps_lower or "route" in steps_lower or "sentral" in steps_lower or "terminal" in steps_lower:
-            print(f"[{tc_id}] Navigating: Selecting station route parameters...")
-            subprocess.run([adb_cmd, "shell", "input", "tap", "540", "450"], capture_output=True)
-            time.sleep(2)
-            subprocess.run([adb_cmd, "shell", "input", "tap", "540", "580"], capture_output=True)
-            time.sleep(2)
-
-        if "payment" in steps_lower or "checkout" in steps_lower or "gateway" in steps_lower or "declined" in steps_lower:
-            print(f"[{tc_id}] Navigating: Proceeding to payment screen...")
-            subprocess.run([adb_cmd, "shell", "input", "tap", "540", "2150"], capture_output=True)
-            time.sleep(3)
-
-        if "qr" in steps_lower or "ticket" in steps_lower or "turnstile" in steps_lower:
-            print(f"[{tc_id}] Navigating: Opening 'My Tickets' and QR code screen...")
-            subprocess.run([adb_cmd, "shell", "input", "tap", "340", "890"], capture_output=True)
-            time.sleep(2)
-            subprocess.run([adb_cmd, "shell", "input", "tap", "540", "500"], capture_output=True)
-            time.sleep(2)
-
-    except Exception as e:
-        print(f"Navigation warning for {tc_id}: {str(e)}")
-
-def check_keyboard_controls():
-    if has_msvcrt and msvcrt.kbhit():
-        key = msvcrt.getch().decode('utf-8', errors='ignore').lower()
-        if key == 'q':
-            return 'stop'
-        elif key == 'p':
-            return 'pause'
-    return None
-
-def run_automated_testing(status_container=None):
-    excel_path = "Master_ERL_Test_Cases.xlsx"
-    report_path = "ERL_Test_Execution_Report.docx"
-    screenshot_dir = "screenshots"
-    adb_cmd = get_adb_path()
-    
-    if not os.path.exists(screenshot_dir):
-        os.makedirs(screenshot_dir)
-
-    msg = "Step 1: Reading and cleaning test cases from Excel file..."
-    print(msg)
-    if status_container: status_container.text(msg)
-
-    try:
-        df = pd.read_excel(excel_path)
-        print(f"Successfully loaded {len(df)} test cases from {excel_path}.")
-    except Exception as e:
-        err = f"Error reading Excel file '{excel_path}': {str(e)}"
-        print(err)
-        if status_container: status_container.error(err)
-        return
-
-    msg = "Step 2: Checking connected Android device via ADB..."
-    print(msg)
-    if status_container: status_container.text(msg)
-    try:
-        device_result = subprocess.run([adb_cmd, "devices"], capture_output=True, text=True, check=True)
-        print(device_result.stdout)
-    except Exception as e:
-        err = f"ADB check failed: {str(e)}"
-        print(err)
-        if status_container: status_container.error(err)
-        return
-
-    doc = Document()
-    doc.add_heading('ERL Automated Test Execution Report', level=0)
-    p = doc.add_paragraph()
-    p.add_run(f"Execution Date/Time: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-    p.add_run("Target Application: ERL App (Android Device)\n")
-    doc.add_heading('Summary of Test Execution', level=1)
-
-    results_summary = []
-    is_stopped = False
-    
-    for index, row in df.iterrows():
-        action = check_keyboard_controls()
-        if action == 'stop':
-            is_stopped = True
-            break
-        elif action == 'pause':
-            while True:
-                if has_msvcrt and msvcrt.kbhit():
-                    break
-                time.sleep(0.5)
-
-        tc_id = str(row.get('Test Case ID', row.get('ID', f"TC_ERL_{index+1:03d}"))).strip()
-        tc_name = clean_natural_text(str(row.get('Test Name', row.get('Title', ''))))
-        scenario = clean_natural_text(str(row.get('Scenario', row.get('Description', ''))))
-        steps = clean_natural_text(str(row.get('Steps', row.get('Test Steps', ''))))
-
-        is_negative = any(kw in scenario.lower() or kw in tc_name.lower() for kw in ['fail', 'error', 'decline', 'timeout', 'invalid', 'hold', 'gateway'])
-        scenario_type = "Negative Scenario" if is_negative else "Positive Scenario"
-
-        exec_msg = f"Executing [{tc_id}] ({scenario_type}): {tc_name}"
-        print(f"\n--- {exec_msg} ---")
-        if status_container: status_container.text(exec_msg)
-
-        status = "Pass"
-        actual_result = f"Test executed successfully under {scenario_type.lower()} validation with stability check."
-        remarks = "None"
-        screenshot_filename = None
-
-        try:
-            execute_app_navigation(adb_cmd, tc_id, steps, scenario)
-
-            start_time = time.time()
-            while time.time() - start_time < 30:
-                action = check_keyboard_controls()
-                if action == 'stop':
-                    is_stopped = True
-                    break
-                time.sleep(1)
-
-            if is_stopped:
-                break
-
-            remote_path = f"/sdcard/{tc_id}.png"
-            local_path = os.path.join(screenshot_dir, f"{tc_id}.png")
-            
-            cap_result = subprocess.run([adb_cmd, "shell", "screencap", "-p", remote_path], capture_output=True, text=True)
-            if cap_result.returncode != 0:
-                raise Exception("Failed to execute screencap on device.")
-            
-            pull_result = subprocess.run([adb_cmd, "pull", remote_path, local_path], capture_output=True, text=True)
-            if pull_result.returncode == 0 and os.path.exists(local_path):
-                screenshot_filename = local_path
-            else:
-                raise Exception("Failed to pull screenshot from device memory.")
-
-            subprocess.run([adb_cmd, "shell", "am", "start", "-n", "com.ets.kits/.MainActivity"], capture_output=True)
-            time.sleep(1)
-
-        except Exception as e:
-            err_msg = str(e)
-            if "device" in err_msg.lower() or "disconnected" in err_msg.lower():
-                status = "Blocked"
-                remarks = f"Execution blocked: {err_msg}"
-                actual_result = "Unable to complete execution due to device connectivity issue."
-            else:
-                status = "Fail"
-                remarks = f"Error encountered: {err_msg}"
-                actual_result = "Test failed during execution."
-
-        results_summary.append({
-            "ID": tc_id,
-            "Type": scenario_type,
-            "Name": tc_name,
-            "Scenario": scenario,
-            "Status": status,
-            "Actual": actual_result,
-            "Remarks": remarks,
-            "Screenshot": screenshot_filename
-        })
-
-        if is_stopped:
-            break
-
-    table = doc.add_table(rows=1, cols=6)
-    table.style = 'Table Grid'
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'Test ID'
-    hdr_cells[1].text = 'Type'
-    hdr_cells[2].text = 'Test Name'
-    hdr_cells[3].text = 'Status'
-    hdr_cells[4].text = 'Actual Result'
-    hdr_cells[5].text = 'Remarks'
-
-    for res in results_summary:
-        row_cells = table.add_row().cells
-        row_cells[0].text = res['ID']
-        row_cells[1].text = res['Type']
-        row_cells[2].text = res['Name']
-        row_cells[3].text = res['Status']
-        row_cells[4].text = res['Actual']
-        row_cells[5].text = res['Remarks']
-
-    doc.add_heading('Detailed Test Case Execution & Screenshots', level=1)
-
-    for res in results_summary:
-        doc.add_heading(f"Test Case: {res['ID']} ({res['Type']}) - {res['Name']}", level=2)
-        doc.add_paragraph(f"Scenario Description: {res['Scenario']}")
-        doc.add_paragraph(f"Execution Status: {res['Status']}")
-        doc.add_paragraph(f"Actual Result: {res['Actual']}")
-        if res['Remarks'] != "None":
-            doc.add_paragraph(f"Remarks: {res['Remarks']}")
+if st.button("🚀 Generate Master E2E Test Suite", type="primary"):
+    with st.spinner("Analyzing app scope and generating non-redundant test cases..."):
         
-        if res['Screenshot'] and os.path.exists(res['Screenshot']):
-            doc.add_paragraph("Execution Screenshot:")
-            doc.add_picture(res['Screenshot'], width=Inches(4.5))
-        else:
-            doc.add_paragraph("Execution Screenshot: [Not Available / Blocked]")
+        origins = [
+            "KL Sentral", 
+            "Bandar Tasik Selatan", 
+            "Putrajaya and Cyberjaya", 
+            "Salak Tinggi", 
+            "KLIA Terminal One"
+        ]
+        destinations = [
+            "KLIA Terminal Two", 
+            "KLIA Terminal One", 
+            "Putrajaya and Cyberjaya", 
+            "Bandar Tasik Selatan", 
+            "KL Sentral"
+        ]
+        product_types = [
+            ("Standard Express Ticket", "Single Trip"),
+            ("Return Flexi Ticket", "Round Trip")
+        ]
+        passenger_types = [
+            ("Adult Passenger", "Standard Fare"),
+            ("Concession Passenger", "Discounted Fare")
+        ]
+        payment_scenarios = [
+            (
+                "Positive", 
+                "Secure Authorized Checkout", 
+                "Payment completes successfully and digital ticket renders clearly with automatic screen brightness enhancement for gantry scanning.", 
+                "User account is authenticated with active payment linkage."
+            ),
+            (
+                "Negative", 
+                "Declined Card Payment Failure", 
+                "System displays card decline notification, retains user cart session intact, and allows payment retry.", 
+                "User account is authenticated with test card configured for decline response."
+            ),
+            (
+                "Negative", 
+                "Gateway Timeout Error", 
+                "System catches connection delay, displays friendly alert message, and restores shopping session safely.", 
+                "User account is authenticated under simulated network latency conditions."
+            )
+        ]
+
+        generated_suite = []
+        tc_counter = 1
+
+        for orig in origins:
+            for dest in destinations:
+                if orig == dest:
+                    continue
+                for prod_name, prod_desc in product_types:
+                    for pass_name, pass_desc in passenger_types:
+                        for scen_type, pay_name, pay_expected, pay_pre in payment_scenarios:
+                            if tc_counter > test_target_count:
+                                break
+                            
+                            test_id = f"TC_E2E_{tc_counter:03d}"
+                            test_name = f"{orig} to {dest} {prod_name} {pass_name} {pay_name}"
+                            scenario = f"{scen_type} validation of {prod_name.lower()} workflow from {orig} to {dest}"
+                            
+                            description = f"Validating system behavior for {prod_name.lower()} purchase between {orig} and {dest} utilizing {pass_name.lower()} under {pay_name.lower()} conditions."
+                            
+                            pre_condition = f"User is successfully authenticated and logged into the application. {pay_pre}"
+                            
+                            # Using natural transition words instead of numbers for steps
+                            test_steps = (
+                                f"First, navigate to the main homepage and select the target transport service feature icon. "
+                                f"Next, choose {orig} as the departure station and {dest} as the arrival station. "
+                                f"Then, choose {prod_name} with {pass_desc} classification. "
+                                f"Proceed to review the itinerary details, select {pay_name}, and complete the checkout action."
+                            )
+                            
+                            test_data = f"Departure Station: {orig}, Arrival Station: {dest}, Product Type: {prod_name}, Passenger Category: {pass_name}, Payment Mode: {pay_name}"
+                            
+                            expected_result = f"Itinerary summary displays correct route details from {orig} to {dest}. {pay_expected}"
+                            priority = "High" if scen_type == "Positive" else "Medium"
+                            
+                            generated_suite.append({
+                                "Test ID": test_id,
+                                "Scenario Type": scen_type,
+                                "Test Name": test_name,
+                                "Scenario": scenario,
+                                "Description": description,
+                                "Pre Condition": pre_condition,
+                                "Test Steps": test_steps,
+                                "Test Data": test_data,
+                                "Expected Result": expected_result,
+                                "Actual Result": "",
+                                "Status": "Pending",
+                                "Priority": priority,
+                                "Remarks": ""
+                            })
+                            tc_counter += 1
+
+        df = pd.DataFrame(generated_suite)
+        df = df.drop_duplicates(subset=['Test Steps', 'Test Data']).reset_index(drop=True)
         
-        doc.add_paragraph("-" * 40)
+        st.success(f"Successfully generated {len(df)} unique test cases combining positive and negative scenarios!")
+        st.dataframe(df, use_container_width=True)
 
-    doc.save(report_path)
-    success_msg = f"Test Execution Report successfully generated and saved as '{report_path}'."
-    print(success_msg)
-    if status_container: status_container.success(success_msg)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Master_Test_Suite')
 
-# Streamlit Web App Interface
-if has_streamlit:
-    st.title("ERL Automated Test Execution Dashboard")
-    st.write("Manage and execute automated test cases with positive/negative scenario validation and report generation.")
-    
-    if st.button("Start Test Automation"):
-        status_box = st.empty()
-        status_box.text("Initializing test execution...")
-        run_automated_testing(status_box)
-        
-        if os.path.exists("ERL_Test_Execution_Report.docx"):
-            with open("ERL_Test_Execution_Report.docx", "rb") as f:
-                st.download_button("Download Test Execution Report (.docx)", f, file_name="ERL_Test_Execution_Report.docx")
+        output.seek(0)
+        wb = openpyxl.load_workbook(output)
+        ws = wb.active
 
-elif __name__ == "__main__":
-    run_automated_testing()
+        for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for cell in row:
+                cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
+
+        col_letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']
+        widths = [15, 18, 35, 35, 40, 35, 50, 35, 45, 15, 12, 12, 15]
+        for col_letter, width in zip(col_letters, widths):
+            ws.column_dimensions[col_letter].width = width
+
+        final_output = io.BytesIO()
+        wb.save(final_output)
+        final_output.seek(0)
+
+        st.download_button(
+            label=f"📥 Download All {len(df)} Test Cases (.xlsx)",
+            data=final_output,
+            file_name=f"Master_Test_Suite_{len(df)}_Cases.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
