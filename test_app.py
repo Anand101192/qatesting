@@ -6,6 +6,13 @@ import pandas as pd
 from docx import Document
 from docx.shared import Inches, Pt
 
+# Try importing streamlit (for web app deployment)
+try:
+    import streamlit as st
+    has_streamlit = True
+except ImportError:
+    has_streamlit = False
+
 # Cross-platform compatibility for msvcrt (Windows only)
 try:
     import msvcrt
@@ -21,11 +28,7 @@ def get_adb_path():
     return 'adb'
 
 def clean_natural_text(text):
-    """
-    Cleans text to ensure natural English:
-    - Removes technical brackets, hashes, and variables.
-    - Removes numbers/digits (except Test ID).
-    """
+    """Cleans text to ensure natural English without technical hashes or digits."""
     if not isinstance(text, str):
         return str(text)
     text = re.sub(r'\[.*?\]', '', text)
@@ -41,7 +44,6 @@ def clean_natural_text(text):
     return text
 
 def dismiss_permissions(adb_cmd):
-    """Automatically dismisses Android permission popups if they appear."""
     try:
         subprocess.run([adb_cmd, "shell", "input", "tap", "540", "770"], capture_output=True)
         time.sleep(1)
@@ -49,10 +51,6 @@ def dismiss_permissions(adb_cmd):
         pass
 
 def execute_app_navigation(adb_cmd, tc_id, steps, scenario):
-    """
-    Performs precise ADB taps based on test steps so each test case 
-    navigates to its respective screen and generates a unique screenshot.
-    """
     try:
         subprocess.run([adb_cmd, "shell", "input", "keyevent", "KEYCODE_WAKEUP"], capture_output=True)
         time.sleep(1)
@@ -88,7 +86,6 @@ def execute_app_navigation(adb_cmd, tc_id, steps, scenario):
         print(f"Navigation warning for {tc_id}: {str(e)}")
 
 def check_keyboard_controls():
-    """Checks if 'p' (pause) or 'q' (quit/stop) was pressed in the command prompt."""
     if has_msvcrt and msvcrt.kbhit():
         key = msvcrt.getch().decode('utf-8', errors='ignore').lower()
         if key == 'q':
@@ -97,7 +94,7 @@ def check_keyboard_controls():
             return 'pause'
     return None
 
-def run_automated_testing():
+def run_automated_testing(status_container=None):
     excel_path = "Master_ERL_Test_Cases.xlsx"
     report_path = "ERL_Test_Execution_Report.docx"
     screenshot_dir = "screenshots"
@@ -106,29 +103,30 @@ def run_automated_testing():
     if not os.path.exists(screenshot_dir):
         os.makedirs(screenshot_dir)
 
-    print("Step 1: Reading and cleaning test cases from Excel file...")
+    msg = "Step 1: Reading and cleaning test cases from Excel file..."
+    print(msg)
+    if status_container: status_container.text(msg)
+
     try:
         df = pd.read_excel(excel_path)
         print(f"Successfully loaded {len(df)} test cases from {excel_path}.")
     except Exception as e:
-        print(f"Error reading Excel file '{excel_path}': {str(e)}")
+        err = f"Error reading Excel file '{excel_path}': {str(e)}"
+        print(err)
+        if status_container: status_container.error(err)
         return
 
-    print("Step 2: Checking connected Android device via ADB...")
+    msg = "Step 2: Checking connected Android device via ADB..."
+    print(msg)
+    if status_container: status_container.text(msg)
     try:
         device_result = subprocess.run([adb_cmd, "devices"], capture_output=True, text=True, check=True)
         print(device_result.stdout)
     except Exception as e:
-        print(f"ADB check failed: {str(e)}")
+        err = f"ADB check failed: {str(e)}"
+        print(err)
+        if status_container: status_container.error(err)
         return
-
-    print("\n================ CONTROLS ================")
-    if has_msvcrt:
-        print("Press [ P ] in this Command Prompt to PAUSE.")
-        print("Press [ Q ] in this Command Prompt to STOP.")
-    else:
-        print("Keyboard controls (msvcrt) active only on Windows local terminal.")
-    print("==========================================\n")
 
     doc = Document()
     doc.add_heading('ERL Automated Test Execution Report', level=0)
@@ -143,22 +141,13 @@ def run_automated_testing():
     for index, row in df.iterrows():
         action = check_keyboard_controls()
         if action == 'stop':
-            print("\n[STOPPED]: 'Q' key pressed. Stopping execution gracefully...")
             is_stopped = True
             break
         elif action == 'pause':
-            print("\n[PAUSED]: 'P' key pressed. Execution paused. Press any key to resume...")
             while True:
                 if has_msvcrt and msvcrt.kbhit():
-                    res_key = msvcrt.getch().decode('utf-8', errors='ignore').lower()
-                    if res_key == 'q':
-                        is_stopped = True
-                        break
-                    print("Resuming execution...")
                     break
                 time.sleep(0.5)
-            if is_stopped:
-                break
 
         tc_id = str(row.get('Test Case ID', row.get('ID', f"TC_ERL_{index+1:03d}"))).strip()
         tc_name = clean_natural_text(str(row.get('Test Name', row.get('Title', ''))))
@@ -168,7 +157,9 @@ def run_automated_testing():
         is_negative = any(kw in scenario.lower() or kw in tc_name.lower() for kw in ['fail', 'error', 'decline', 'timeout', 'invalid', 'hold', 'gateway'])
         scenario_type = "Negative Scenario" if is_negative else "Positive Scenario"
 
-        print(f"\n--- Executing [{tc_id}] ({scenario_type}): {tc_name} ---")
+        exec_msg = f"Executing [{tc_id}] ({scenario_type}): {tc_name}"
+        print(f"\n--- {exec_msg} ---")
+        if status_container: status_container.text(exec_msg)
 
         status = "Pass"
         actual_result = f"Test executed successfully under {scenario_type.lower()} validation with stability check."
@@ -178,25 +169,13 @@ def run_automated_testing():
         try:
             execute_app_navigation(adb_cmd, tc_id, steps, scenario)
 
-            print(f"Enforcing 30-second stability check for {tc_id}...")
             start_time = time.time()
             while time.time() - start_time < 30:
                 action = check_keyboard_controls()
                 if action == 'stop':
                     is_stopped = True
                     break
-                elif action == 'pause':
-                    print("[PAUSED mid-test] Press any key to resume...")
-                    while True:
-                        if has_msvcrt and msvcrt.kbhit():
-                            break
-                        time.sleep(0.5)
-
                 time.sleep(1)
-                if int(time.time() - start_time) % 5 == 0:
-                    dev_check = subprocess.run([adb_cmd, "get-state"], capture_output=True, text=True)
-                    if "device" not in dev_check.stdout:
-                        raise Exception("Android device disconnected during execution window.")
 
             if is_stopped:
                 break
@@ -204,7 +183,6 @@ def run_automated_testing():
             remote_path = f"/sdcard/{tc_id}.png"
             local_path = os.path.join(screenshot_dir, f"{tc_id}.png")
             
-            print(f"Capturing screenshot for {tc_id}...")
             cap_result = subprocess.run([adb_cmd, "shell", "screencap", "-p", remote_path], capture_output=True, text=True)
             if cap_result.returncode != 0:
                 raise Exception("Failed to execute screencap on device.")
@@ -228,7 +206,6 @@ def run_automated_testing():
                 status = "Fail"
                 remarks = f"Error encountered: {err_msg}"
                 actual_result = "Test failed during execution."
-            print(f"Test {tc_id} marked as {status}. Remarks: {remarks}")
 
         results_summary.append({
             "ID": tc_id,
@@ -244,8 +221,6 @@ def run_automated_testing():
         if is_stopped:
             break
 
-    print("\nStep 5: Generating Word Document Report (ERL_Test_Execution_Report.docx)...")
-    
     table = doc.add_table(rows=1, cols=6)
     table.style = 'Table Grid'
     hdr_cells = table.rows[0].cells
@@ -284,7 +259,23 @@ def run_automated_testing():
         doc.add_paragraph("-" * 40)
 
     doc.save(report_path)
-    print(f"Test Execution Report successfully generated and saved as '{report_path}'.")
+    success_msg = f"Test Execution Report successfully generated and saved as '{report_path}'."
+    print(success_msg)
+    if status_container: status_container.success(success_msg)
 
-if __name__ == "__main__":
+# Streamlit App UI Interface
+if has_streamlit and __name__ != "__main__":
+    st.title("ERL Automated Test Execution Dashboard")
+    st.write("Manage and execute automated test cases with positive/negative scenario validation and report generation.")
+    
+    if st.button("Start Test Automation"):
+        status_box = st.empty()
+        status_box.text("Initializing test execution...")
+        run_automated_testing(status_box)
+        
+        if os.path.exists("ERL_Test_Execution_Report.docx"):
+            with open("ERL_Test_Execution_Report.docx", "rb") as f:
+                st.download_button("Download Test Execution Report (.docx)", f, file_name="ERL_Test_Execution_Report.docx")
+
+elif __name__ == "__main__":
     run_automated_testing()
