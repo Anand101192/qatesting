@@ -1,11 +1,17 @@
 import os
 import time
 import subprocess
-import msvcrt
 import re
 import pandas as pd
 from docx import Document
 from docx.shared import Inches, Pt
+
+# Cross-platform compatibility for msvcrt (Windows only)
+try:
+    import msvcrt
+    has_msvcrt = True
+except ImportError:
+    has_msvcrt = False
 
 def get_adb_path():
     local_app_data = os.environ.get('LocalAppData', 'C:\\Users\\User\\AppData\\Local')
@@ -22,20 +28,15 @@ def clean_natural_text(text):
     """
     if not isinstance(text, str):
         return str(text)
-    # Remove brackets like [KLS]
     text = re.sub(r'\[.*?\]', '', text)
-    # Remove hash symbols
     text = text.replace('#', '')
-    # Replace technical codes with normal English terms
     text = text.replace('KLS', 'KL Sentral')
     text = text.replace('KLT2', 'KLIA Terminal Two')
     text = text.replace('KLT1', 'KLIA Terminal One')
     text = text.replace('PJC', 'Putrajaya and Cyberjaya')
     text = text.replace('BTS', 'Bandar Tasik Selatan')
     text = text.replace('E2E', 'End-to-end')
-    # Remove digits/numbers to keep descriptions strictly text-based
     text = re.sub(r'\d+', '', text)
-    # Clean extra whitespace
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -59,13 +60,11 @@ def execute_app_navigation(adb_cmd, tc_id, steps, scenario):
 
         steps_lower = steps.lower()
 
-        # Step 1: Tap ERL ticketing module on Home screen
         print(f"[{tc_id}] Navigating: Tapping ERL ticketing module...")
         subprocess.run([adb_cmd, "shell", "input", "tap", "825", "570"], capture_output=True)
         time.sleep(3)
         dismiss_permissions(adb_cmd)
 
-        # Step 2: Handle station route routing
         if "station" in steps_lower or "route" in steps_lower or "sentral" in steps_lower or "terminal" in steps_lower:
             print(f"[{tc_id}] Navigating: Selecting station route parameters...")
             subprocess.run([adb_cmd, "shell", "input", "tap", "540", "450"], capture_output=True)
@@ -73,13 +72,11 @@ def execute_app_navigation(adb_cmd, tc_id, steps, scenario):
             subprocess.run([adb_cmd, "shell", "input", "tap", "540", "580"], capture_output=True)
             time.sleep(2)
 
-        # Step 3: Handle Payment / Negative or Positive Checkout simulation
         if "payment" in steps_lower or "checkout" in steps_lower or "gateway" in steps_lower or "declined" in steps_lower:
             print(f"[{tc_id}] Navigating: Proceeding to payment screen...")
             subprocess.run([adb_cmd, "shell", "input", "tap", "540", "2150"], capture_output=True)
             time.sleep(3)
 
-        # Step 4: Handle QR Ticket / My Tickets verification
         if "qr" in steps_lower or "ticket" in steps_lower or "turnstile" in steps_lower:
             print(f"[{tc_id}] Navigating: Opening 'My Tickets' and QR code screen...")
             subprocess.run([adb_cmd, "shell", "input", "tap", "340", "890"], capture_output=True)
@@ -92,7 +89,7 @@ def execute_app_navigation(adb_cmd, tc_id, steps, scenario):
 
 def check_keyboard_controls():
     """Checks if 'p' (pause) or 'q' (quit/stop) was pressed in the command prompt."""
-    if msvcrt.kbhit():
+    if has_msvcrt and msvcrt.kbhit():
         key = msvcrt.getch().decode('utf-8', errors='ignore').lower()
         if key == 'q':
             return 'stop'
@@ -126,8 +123,11 @@ def run_automated_testing():
         return
 
     print("\n================ CONTROLS ================")
-    print("Press [ P ] in this Command Prompt to PAUSE.")
-    print("Press [ Q ] in this Command Prompt to STOP.")
+    if has_msvcrt:
+        print("Press [ P ] in this Command Prompt to PAUSE.")
+        print("Press [ Q ] in this Command Prompt to STOP.")
+    else:
+        print("Keyboard controls (msvcrt) active only on Windows local terminal.")
     print("==========================================\n")
 
     doc = Document()
@@ -149,7 +149,7 @@ def run_automated_testing():
         elif action == 'pause':
             print("\n[PAUSED]: 'P' key pressed. Execution paused. Press any key to resume...")
             while True:
-                if msvcrt.kbhit():
+                if has_msvcrt and msvcrt.kbhit():
                     res_key = msvcrt.getch().decode('utf-8', errors='ignore').lower()
                     if res_key == 'q':
                         is_stopped = True
@@ -160,13 +160,11 @@ def run_automated_testing():
             if is_stopped:
                 break
 
-        # Extract and clean text fields (removing numbers from descriptions, eliminating repetition)
         tc_id = str(row.get('Test Case ID', row.get('ID', f"TC_ERL_{index+1:03d}"))).strip()
         tc_name = clean_natural_text(str(row.get('Test Name', row.get('Title', ''))))
         scenario = clean_natural_text(str(row.get('Scenario', row.get('Description', ''))))
         steps = clean_natural_text(str(row.get('Steps', row.get('Test Steps', ''))))
 
-        # Determine if test is Positive or Negative scenario based on content
         is_negative = any(kw in scenario.lower() or kw in tc_name.lower() for kw in ['fail', 'error', 'decline', 'timeout', 'invalid', 'hold', 'gateway'])
         scenario_type = "Negative Scenario" if is_negative else "Positive Scenario"
 
@@ -178,10 +176,8 @@ def run_automated_testing():
         screenshot_filename = None
 
         try:
-            # Step 3A: Execute precise navigation
             execute_app_navigation(adb_cmd, tc_id, steps, scenario)
 
-            # Step 3B: Enforce 30-Second Execution & Polling Window stability check
             print(f"Enforcing 30-second stability check for {tc_id}...")
             start_time = time.time()
             while time.time() - start_time < 30:
@@ -192,7 +188,7 @@ def run_automated_testing():
                 elif action == 'pause':
                     print("[PAUSED mid-test] Press any key to resume...")
                     while True:
-                        if msvcrt.kbhit():
+                        if has_msvcrt and msvcrt.kbhit():
                             break
                         time.sleep(0.5)
 
@@ -205,7 +201,6 @@ def run_automated_testing():
             if is_stopped:
                 break
 
-            # Step 4: Capture unique screenshot
             remote_path = f"/sdcard/{tc_id}.png"
             local_path = os.path.join(screenshot_dir, f"{tc_id}.png")
             
