@@ -113,7 +113,6 @@ if st.button("🚀 Generate Test Suite", type="primary"):
         generated_suite = []
         tc_counter = 1
 
-        # Generate Functional E2E Cases if selected
         if "Functional" in test_category or "Combined" in test_category:
             for orig in origins:
                 for dest in destinations:
@@ -130,7 +129,6 @@ if st.button("🚀 Generate Test Suite", type="primary"):
                                 scenario = f"{scen_type} validation of {prod_name.lower()} workflow from {orig} to {dest}"
                                 
                                 description = f"Validating system behavior for {prod_name.lower()} purchase between {orig} and {dest} utilizing {pass_name.lower()} under {pay_name.lower()} conditions."
-                                
                                 pre_condition = f"User is successfully authenticated and logged into the application. {pay_pre}"
                                 
                                 test_steps = (
@@ -162,7 +160,6 @@ if st.button("🚀 Generate Test Suite", type="primary"):
                                 })
                                 tc_counter += 1
 
-        # Generate UI Test Cases if selected
         if "UI" in test_category or "Combined" in test_category:
             ui_counter = 1
             for scen_type, ui_name, ui_desc, ui_steps, ui_expected in ui_test_scenarios:
@@ -191,33 +188,58 @@ if st.button("🚀 Generate Test Suite", type="primary"):
         df = pd.DataFrame(generated_suite)
         df = df.drop_duplicates(subset=['Test Steps', 'Test Data']).reset_index(drop=True)
         
-        st.success(f"Successfully generated {len(df)} test cases matching your criteria!")
-        st.dataframe(df, use_container_width=True)
+        # Save generated dataframe to session state so filtering works smoothly
+        st.session_state['generated_df'] = df
 
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Master_Test_Suite')
+# --- NEW: Sidebar Dropdown Filter for Specific Test Cases ---
+if 'generated_df' in st.session_state and not st.session_state['generated_df'].empty:
+    st.sidebar.markdown("---")
+    st.sidebar.header("🔍 Filter Test Case View")
+    
+    df_cached = st.session_state['generated_df']
+    
+    # Create a list of options for the dropdown (combining Test ID and Test Name)
+    test_case_options = ["All Test Cases"] + [f"{row['Test ID']} - {row['Test Name']}" for _, row in df_cached.iterrows()]
+    
+    selected_filter = st.sidebar.selectbox(
+        "Select Specific Test Case to Inspect:",
+        test_case_options
+    )
+    
+    # Filter dataframe based on dropdown selection
+    if selected_filter == "All Test Cases":
+        filtered_df = df_cached
+    else:
+        selected_id = selected_filter.split(" - ")[0]
+        filtered_df = df_cached[df_cached['Test ID'] == selected_id]
 
-        output.seek(0)
-        wb = openpyxl.load_workbook(output)
-        ws = wb.active
+    st.success(f"Displaying {len(filtered_df)} test case(s) based on your selection.")
+    st.dataframe(filtered_df, use_container_width=True)
 
-        for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-            for cell in row:
-                cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        filtered_df.to_excel(writer, index=False, sheet_name='Master_Test_Suite')
 
-        col_letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']
-        widths = [15, 20, 18, 35, 35, 40, 35, 50, 35, 45, 15, 12, 12, 15]
-        for col_letter, width in zip(col_letters, widths):
-            ws.column_dimensions[col_letter].width = width
+    output.seek(0)
+    wb = openpyxl.load_workbook(output)
+    ws = wb.active
 
-        final_output = io.BytesIO()
-        wb.save(final_output)
-        final_output.seek(0)
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
 
-        st.download_button(
-            label=f"📥 Download All {len(df)} Test Cases (.xlsx)",
-            data=final_output,
-            file_name=f"ERL_Master_Test_Suite_{len(df)}_Cases.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    col_letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']
+    widths = [15, 20, 18, 35, 35, 40, 35, 50, 35, 45, 15, 12, 12, 15]
+    for col_letter, width in zip(col_letters, widths):
+        ws.column_dimensions[col_letter].width = width
+
+    final_output = io.BytesIO()
+    wb.save(final_output)
+    final_output.seek(0)
+
+    st.download_button(
+        label=f"📥 Download Selected Test Cases (.xlsx)",
+        data=final_output,
+        file_name=f"ERL_Filtered_Test_Suite.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
